@@ -48,9 +48,10 @@ def to_array(somelist, column, start = 1):
     array = [float(i) for i in array_raw]
     return array
 
-def search_ps(ra, dec):
-    gateway_session = SSHSession('atlas-base-adm01.ifa.hawaii.edu','qinan', password='PRBNAhK93bMc88Qn').open()
-    remote_session = gateway_session.get_remote_session('atlas-base-db07.ifa.hawaii.edu',password='PRBNAhK93bMc88Qn')
+def search_atlas(ra, dec):
+    gateway_session1 = SSHSession('10.162.61.62','minix', password='123456').open()
+    gateway_session2 = gateway_session1.get_remote_session('atlas-base-adm01.ifa.hawaii.edu', username = 'qinan' ,password='PRBNAhK93bMc88Qn')
+    remote_session = gateway_session2.get_remote_session('atlas-base-db07.ifa.hawaii.edu',password='PRBNAhK93bMc88Qn')
 
     today = dt.today()
     con = sqlite3.connect(":memory:")
@@ -58,16 +59,16 @@ def search_ps(ra, dec):
 
     result=remote_session.get_cmd_output('./mod_force.sh '+str(ra)+' '+ str(dec)+tdate)
 
-    ps_lc = at.Table(names=('jd','mag', 'mag_err', 'filter'), dtype=('f8', 'f8', 'f8', 'S1'))
+    atlas_lc = at.Table(names=('jd','mag', 'mag_err', 'filter'), dtype=('f8', 'f8', 'f8', 'S1'))
 
     split = result.split('\r\n')
 
     for i in split[1:]:
         k = i.split()
         if int(k[3])>int(k[4]):
-            ps_lc.add_row([float(k[0]), float(k[1]), float(k[2]), k[5]])
+            atlas_lc.add_row([float(k[0]), float(k[1]), float(k[2]), k[5]])
 
-    return ps_lc
+    return atlas_lc
 
 
 def get_ztf(ra, dec):
@@ -136,9 +137,9 @@ def main(argv):
         ax = plot(lc, 'ztf ')
 
     try:
-        ps_lc = search_ps(ra, dec)
-        if len(ps_lc)>0:
-            ax = plot(ps_lc, 'atlas ')
+        atlas_lc = search_atlas(ra, dec)
+        if len(atlas_lc)>0:
+            ax = plot(atlas_lc, 'atlas ')
     except:
         print('unable to get atlas lc')
 
