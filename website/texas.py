@@ -491,6 +491,7 @@ def main(argv):
 	#plt.show()
 #    fig.text(.5, .05, txt, ha='center',wrap=True)
 #    fig.text(-0.5, .05, '432423424214121342', ha='center',wrap=True)
+    print(filename)
     plt.savefig(filename)
     return(gal_can)
 	#append necessary information onto plot, modified distance, redshift etc9

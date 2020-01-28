@@ -95,15 +95,23 @@ def plot(lc, survey):
             jd = jd -2400000
         mag = lc['mag'][lc['filter']==i]
         err = lc['mag_err'][lc['filter']==i]
-        ax.errorbar(jd, mag, err, label = survey + i, fmt='o')
+        plt.errorbar(jd, mag, err, label = survey + i, fmt='o')
 
-
+    ax = plt.gca()
     ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
 
-    ax.grid(True)
+    #ax.grid(True)
     return ax
 
-
+def Save_space(Save):
+    """
+    Creates a pathm if it doesn't already exist.
+    """
+    try:
+        if not os.path.exists(Save):
+            os.makedirs(Save)
+    except FileExistsError:
+        pass
 
 #if __name__ == "__main__":
 def main(argv):
@@ -115,8 +123,7 @@ def main(argv):
     name = argv[2]
     
     home_dir = "./plots/"+date+'/'
-    if not os.path.isdir(home_dir):
-        os.mkdir(home_dir)
+    Save_space(home_dir)
 
     out_fig = home_dir+name + date + '_lc'
 
@@ -148,7 +155,7 @@ def main(argv):
     for [t1, t2] in tess_ob:
         x= np.arange(t1-2400000, t2-2400000, 0.1)
         ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
-    print(tess_ob)
+    #print(tess_ob)
     ax.legend()
 
     today = dt.today()

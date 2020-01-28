@@ -5,7 +5,7 @@ A. Rest
 '''
 import argparse
 import glob
-import os,re,sys,types,copy,random,time
+import sys, os, re, types, shutil,copy,random,time
 
 import astropy.io.fits as fits
 import numpy as np
@@ -19,10 +19,10 @@ def imagestring4web(imagename,width=None,height=None):
     #imstring = '<img src="%s"' % os.path.basename(imagename)
     imstring = '<img src="%s"' % imagename
     if height != None:
-        if type(height) is types.IntType: height = str(height)
+        if type(height) is int: height = str(height)
         imstring += '; height=%s' % height
     if width != None:
-        if type(width) is types.IntType: width = str(width)
+        if type(width) is int: width = str(width)
         imstring += '; width=%s' % width
     imstring +='>'
     return(imstring)
@@ -83,7 +83,7 @@ class htmltable:
             pre   += '<span style="font-family: %s;">' % (font)
             after  = '</span>' + after
         if fontsize != None:
-            if type(fontsize) is types.StringType: fontsize = int(fontsize)
+            if type(fontsize) is str: fontsize = int(fontsize)
             pre   += '<font size=%d>' % (fontsize)
             after  = '</font>' + after
         if fontscale != None:
@@ -99,7 +99,7 @@ class htmltable:
             pre   += '<b>'
             after  = '</b>'
         if color != None:
-            if type(color) is types.IntType: color = str(color)
+            if type(color) is int: color = str(color)
             pre   += '<font color=%s>' % (color)
             after  = '</font>' + after
             
@@ -107,15 +107,15 @@ class htmltable:
         if textalign != None:
             line += ' ALIGN="%s"' % textalign            
         if width != None:
-            if type(width) is types.IntType: width = str(width)
+            if type(width) is int: width = str(width)
             line += ' WIDTH="%s"' % width            
         if height != None:
-            if type(height) is types.IntType: height = str(height)
+            if type(height) is int: height = str(height)
             line += ' HEIGHT="%s"' % height            
         if verticalalign != None:
             line += ' VALIGN="%s"' % verticalalign            
         if bgcolor != None:
-            if type(bgcolor) is types.IntType: bgcolor = str(bgcolor)
+            if type(bgcolor) is int: bgcolor = str(bgcolor)
             line += ' BGCOLOR="%s"' % (bgcolor)
         if colspan != None:
             line += ' colspan="%d"' % (colspan)
@@ -197,19 +197,18 @@ class webpageclass:
     def substituteplaceholder(self, pattern2find, newlines,count=0):
         import types
         patternobject = re.compile(pattern2find)
-        print(newlines)
-        if type(newlines) is types.StringType:
+        if type(newlines) is str:
             s = newlines
-        elif type(newlines) is types.ListType:
+        elif type(newlines) is list:
             s = '\n'.join(newlines)
         else:
-            raise RuntimeError,'Error: unknown type, dont know how to deal with ',newlines
+            raise(RuntimeError,'Error: unknown type,  dont know how to deal with ',newlines)
         for i in range(len(self.lines)):
             self.lines[i] = patternobject.sub(s,self.lines[i])
         
     def loaddefaultpage(self,filename):
         if not os.path.isfile(filename):
-            raise RuntimeError,'ERROR: could not find file '+filename
+            raise(RuntimeError,'ERROR: could not find file '+filename)
         self.lines = open(filename).readlines()
 
     def savepage(self,filename):
@@ -220,6 +219,7 @@ class webpageclass:
         f = open(filename,'w')
         f.writelines(self.lines)
         f.close()
+
 
 
 class weblesniffclass:
@@ -383,38 +383,38 @@ class weblesniffclass:
         webpage.substituteplaceholder('PLACEHOLDER_IMAGETABLE_PLACEHOLDER', infotable.gettable())
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
        
-        print '### Saving ',self.webfilename
+        print('### Saving ',self.webfilename)
         webpage.savepage('./plots/%s/%s' % (self.date,self.webfilename))
 
         del webpage
 
             
-if __name__ == '__main__':
+#if __name__ == '__main__':
 
 #    info =lc_ex.main(351.8348167,41.5839778, '2019uag', '0000') 
 #    print(info)
-    
+def main(args):    
     weblesniff = weblesniffclass()
-    parser = weblesniff.define_options()
-    args = parser.parse_args()
+    #parser = weblesniff.define_options()
+    #args = parser.parse_args()
 
 
-    weblesniff.webdir = args.webdir
-    weblesniff.date = str(args.date)
-    weblesniff.imagelist_htmltemplate = args.imagelist_htmltemplate
+    weblesniff.webdir = args[0]#.webdir
+    weblesniff.date = str(args[1])#.date)
+    weblesniff.imagelist_htmltemplate = args[2]#.imagelist_htmltemplate
 #    print(weblesniff.date, args.date)
-
-    if args.verbose>=1:
-        print("webdir:    {}".format(weblesniff.webdir))
+    if type(args[4]) == int:
+        if args[4]>=1:
+            print("webdir:    {}".format(weblesniff.webdir))
         
-    if args.figsuffix != None:
-        weblesniff.figsuffix = args.figsuffix
-    weblesniff.usebinnedflag = args.usebinned
-    weblesniff.rootwebaddress = args.rootwebaddress
+    if args[3] != None:
+        weblesniff.figsuffix = args[3]#.figsuffix
+    #weblesniff.usebinnedflag = args.usebinned
+    #weblesniff.rootwebaddress = args.rootwebaddress
         
     # set verbose, debug, and onlyshow level
-    weblesniff.verbose = args.verbose
-    weblesniff.debug = args.debug
+    weblesniff.verbose = args[4]#.verbose
+    weblesniff.debug = args[5]#.debug
 
     weblesniff.makewebpage()
     
