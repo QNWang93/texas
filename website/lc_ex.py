@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import coreapi
 import numpy as np
 import astropy
@@ -122,13 +125,13 @@ def main(argv):
     date = argv[3]
     name = argv[2]
     
-    home_dir = "./plots/"+date+'/'
+    home_dir = "./plots/"+name+'/'
     Save_space(home_dir)
 
-    out_fig = home_dir+name + date + '_lc'
+    out_fig = home_dir + name + date + '_lc'
 
 #    print([ra, dec, '3', name + date+'_texas'])
-    galcan = texas.main([argv[0], argv[1], '3', home_dir+name + date+'_texas'])
+    galcan = texas.main([argv[0], argv[1], '3', home_dir + name + date+'_texas'])
 
     ra = float(ra)
     dec = float(dec)
@@ -151,10 +154,14 @@ def main(argv):
 
     
     tess_ob = tess_obs(ra, dec)
-    
+    i = 0
     for [t1, t2] in tess_ob:
         x= np.arange(t1-2400000, t2-2400000, 0.1)
-        ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
+        if i == 0:
+            ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
+            i += 1
+        else:
+            ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5)
     #print(tess_ob)
     ax.legend()
 
