@@ -1561,6 +1561,7 @@ def main(argv):
     
     if do_im == True:
         plot(ra, dec, bfim, gal_list, s_list, ser_list, catalogue, search_size, filename)
+        print(filename)
 
 
 	#ax.legend()
