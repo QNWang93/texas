@@ -262,7 +262,7 @@ class weblesniffclass:
 #        if self.usebinnedflag:
 #            figpattern = '*.bin.%s' % self.figsuffix
 #        else:
-        figpattern = '20[0-9][0-9]*[0-9][0-9][0-9][0-9]_texas.%s' % self.figsuffix
+        figpattern = '{name}*_texas.{suffix}'.format(name=self.date, suffix=self.figsuffix)
 #        figlc = '20[0-9][0-9]*[0-9][0-9][0-9][0-9]_lc.%s' % self.figsuffix
         
         self.figlist = {}
@@ -384,7 +384,7 @@ class weblesniffclass:
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
        
         print('### Saving ',self.webfilename)
-        webpage.savepage('./plots/%s/%s' % (self.date,self.webfilename))
+        webpage.savepage('./%s/%s' % (self.date,self.webfilename))
 
         del webpage
 
@@ -403,18 +403,18 @@ def main(args):
     weblesniff.date = str(args[1])#.date)
     weblesniff.imagelist_htmltemplate = args[2]#.imagelist_htmltemplate
 #    print(weblesniff.date, args.date)
-    if type(args[4]) == int:
-        if args[4]>=1:
-            print("webdir:    {}".format(weblesniff.webdir))
+    #if type(args[4]) == int:
+    #    if args[4]>=1:
+    #        print("webdir:    {}".format(weblesniff.webdir))
         
     if args[3] != None:
         weblesniff.figsuffix = args[3]#.figsuffix
     #weblesniff.usebinnedflag = args.usebinned
-    #weblesniff.rootwebaddress = args.rootwebaddress
+    weblesniff.rootwebaddress = None#args.rootwebaddress
         
     # set verbose, debug, and onlyshow level
-    weblesniff.verbose = args[4]#.verbose
-    weblesniff.debug = args[5]#.debug
+    #weblesniff.verbose = args[4]#.verbose
+    #weblesniff.debug = args[5]#.debug
 
     weblesniff.makewebpage()
     
