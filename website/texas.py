@@ -174,8 +174,8 @@ def sourcesearch_glade(ra, dec, radius):#radius in unit of arcmin
     up = int(np.ceil(dec+0.5))
     low= int(np.floor(dec-0.5))
     
-    s1=ascii.read('../../blocks/dec_'+str(up-1)+'_'+str(up)+'.txt')
-    s2=ascii.read('../../blocks/dec_'+str(low)+'_'+str(low+1)+'.txt')
+    s1=ascii.read('../blocks/dec_'+str(up-1)+'_'+str(up)+'.txt')
+    s2=ascii.read('../blocks/dec_'+str(low)+'_'+str(low+1)+'.txt')
     
     if low+2!=up:
         print("problematic")
