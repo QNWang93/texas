@@ -170,7 +170,7 @@ def main(argv):
     con = sqlite3.connect(":memory:")
     tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
     ax.axvline(x=tdate, color = 'k', label = 'today')
-    ax.set_xlim(tdate-90, tdate+10)
+    ax.set_xlim(tdate-40, tdate+10)
     ax.legend()
 
     fig.savefig(out_fig)
