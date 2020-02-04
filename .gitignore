@@ -21,6 +21,7 @@ sdist/
 var/
 wheels/
 *blocks/
+website/plots/*
 *.egg-info/
 .installed.cfg
 *.egg
