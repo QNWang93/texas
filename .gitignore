@@ -23,6 +23,7 @@ wheels/
 *blocks/
 website/plots/*
 *.egg-info/
+/website/candidate*
 .installed.cfg
 *.egg
 MANIFEST

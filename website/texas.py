@@ -207,9 +207,10 @@ def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
         theta = 89.9999*abs(theta)/theta
 
     r=a1*b1*np.sqrt((1+np.tan(theta/180*np.pi)*np.tan(theta/180*np.pi))/(b1*b1+a1*a1*np.tan(theta/180*np.pi)*np.tan(theta/180*np.pi)))
-    
+
+
     nor_d = d*3600/r
-    
+
     return nor_d
 
 def rearrange(s_list, column_name):
@@ -223,21 +224,21 @@ def rearrange(s_list, column_name):
     return s_list
 
 def ser_rearrange(s_list, ra, dec):
-    i=0
+
     if len(s_list) == 0:
         return None
 
     s_list['norm_dist'] = 999999.
     for s in s_list :
-
-        i=i+1
-        
-        #make fitted image
         n_radius=2
         theta1 = s['gSerPhi']#rot angle
         a1= s['gSerRadius'] 
         b1= a1*s['gSerAb']
 
+        if a1<0 or b1<0 or theta1 <-180.:
+            continue 
+        
+        #make fitted image
         nor_d = nor_sep(ra, dec, s['raMean'], s['decMean'], a1, b1, theta1)
         s['norm_dist'] = nor_d
 
