@@ -491,6 +491,9 @@ def main(argv):
     if len(ser_list)>0:
         ser_list = ser_rearrange(ser_list, ra, dec)
         ser_list['z']=-999.
+        ser_list['z_type'] = -999
+        ser_list['ra_glade'] = -999.
+        ser_list['dec_glade'] = -999.
 
 
     gal_can = []
@@ -500,19 +503,31 @@ def main(argv):
             for s in ser_list:
                 if abs((j[6]-s['raMean'])*np.cos(s['decMean']))<0.001 and abs(j[7]-s['decMean'])<0.001 and j[10] != 'null':
                     s['z'] = j[10]
+                    s['z_type'] = j[20]
+                    s['ra_glade'] = j[6]
+                    s['dec_glade'] = j[7]
                     gal_can.append(s)
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')
     
     txt = ""
     for i in np.arange(len(ser_list)):
-        k = ser_list[i]
-        if k['z']<0:
-            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(k['norm_dist']*1000)/1000.0))
-            print('normalized distance to host'+str(i+1)+':   '+str(int(k['norm_dist']*1000)/1000.0))
+        j=0
+        s = ser_list[i]
+        if s['z']<0:
+            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
+            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
         else:
-            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(k['norm_dist']*1000)/1000.0)+' , z='+str(k['z']))
-            print('normalized distance to host'+str(i+1)+':   '+str(int(k['norm_dist']*1000)/1000.0)+' , z='+str(k['z']))
+            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']))
+            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']))
+            if j==0 and s['norm_dist']<20: #pick out candidate with smallest normalized distance
+                print('passed a')
+                for p in gal_list:
+                    print(s['ra_glade'], s['dec_glade'])
+                    print(p[6], p[7])
+                    if p[6] == s['ra_glade'] and s['dec_glade'] == p[7]:
+                        likely_can = p
+            j = j+1
 
 
     s_list = search_s(ra, dec, galac_search_size)
@@ -527,7 +542,7 @@ def main(argv):
 #    fig.text(.5, .05, txt, ha='center',wrap=True)
 #    fig.text(-0.5, .05, '432423424214121342', ha='center',wrap=True)
 
-    return(gal_can)
+    print(likely_can)
 	#append necessary information onto plot, modified distance, redshift etc9
 
 
