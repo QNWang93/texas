@@ -476,7 +476,8 @@ def main(argv):
 	#plot image
 
     if catalogue == 'glade':
-        gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size
+        gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
+        gal_list['norm_d'] = 99999.
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
     else:
@@ -491,21 +492,25 @@ def main(argv):
     if len(ser_list)>0:
         ser_list = ser_rearrange(ser_list, ra, dec)
         ser_list['z']=-999.
-        ser_list['z_type'] = -999
+        ser_list['z_type'] = 'none'
         ser_list['ra_glade'] = -999.
         ser_list['dec_glade'] = -999.
 
 
     gal_can = []
     #print(gal_list)
+
+    z_type_index = ['none', 'spec_z', 'dist_z', 'photo_z']
+   
     if catalogue == 'glade':
         for j in gal_list:
             for s in ser_list:
                 if abs((j[6]-s['raMean'])*np.cos(s['decMean']))<0.001 and abs(j[7]-s['decMean'])<0.001 and j[10] != 'null':
                     s['z'] = j[10]
-                    s['z_type'] = j[20]
+                    s['z_type'] = z_type_index[int(j[20])]
                     s['ra_glade'] = j[6]
                     s['dec_glade'] = j[7]
+                    j['norm_d'] = s['norm_dist']
                     gal_can.append(s)
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')
@@ -518,16 +523,8 @@ def main(argv):
             txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
             print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
         else:
-            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']))
-            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']))
-            if j==0 and s['norm_dist']<20: #pick out candidate with smallest normalized distance
-                print('passed a')
-                for p in gal_list:
-                    print(s['ra_glade'], s['dec_glade'])
-                    print(p[6], p[7])
-                    if p[6] == s['ra_glade'] and s['dec_glade'] == p[7]:
-                        likely_can = p
-            j = j+1
+            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z'])+ ' , z_type = '+s['z_type'])
+            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']) + ' , z_type = '+s['z_type'])
 
 
     s_list = search_s(ra, dec, galac_search_size)
@@ -541,8 +538,8 @@ def main(argv):
 	#plt.show()
 #    fig.text(.5, .05, txt, ha='center',wrap=True)
 #    fig.text(-0.5, .05, '432423424214121342', ha='center',wrap=True)
-
-    print(likely_can)
+    gal_list = rearrange(gal_list, 'norm_d')
+    return(gal_list)
 	#append necessary information onto plot, modified distance, redshift etc9
 
 
