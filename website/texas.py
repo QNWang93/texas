@@ -173,9 +173,9 @@ def sourcesearch_texas(ra, dec, radius):#radius in unit of arcmin
 def sourcesearch_glade(ra, dec, radius):#radius in unit of arcmin
     up = int(np.ceil(dec+0.5))
     low= int(np.floor(dec-0.5))
-    
-    s1=ascii.read('../blocks/dec_'+str(up-1)+'_'+str(up)+'.txt')
-    s2=ascii.read('../blocks/dec_'+str(low)+'_'+str(low+1)+'.txt')
+    col_names = ['PGC', 'GWGC', 'HyperLEDA', '2MASS','SDSS-DR12','Gal_flag','ra','dec','dist', 'dist_err',  'z', 'B', 'B_err', 'B_Abs', 'J', 'J_err', 'H', 'H_err', 'K', 'K_err', 'z_flag', 'v_corr_flag']
+    s1=ascii.read('../blocks/dec_'+str(up-1)+'_'+str(up)+'.txt', names = col_names)
+    s2=ascii.read('../blocks/dec_'+str(low)+'_'+str(low+1)+'.txt', names = col_names)
     
     if low+2!=up:
         print("problematic")
@@ -477,7 +477,8 @@ def main(argv):
 
     if catalogue == 'glade':
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
-        gal_list['norm_d'] = 99999.
+        if len(gal_list)>0:
+            gal_list['norm_d'] = 99999.
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
     else:

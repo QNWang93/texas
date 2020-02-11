@@ -14,6 +14,7 @@ import sqlite3
 from datetime import datetime as dt
 import requests, re
 import texas
+from astropy.io import ascii
 
 def tess_obs(ra, dec):
 
@@ -174,9 +175,10 @@ def main(argv):
     ax.legend()
 
     fig.savefig(out_fig)
-    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
-        for item in galcan:
-            f.write("%s\n" % item)
+    ascii.write(galcan, home_dir+name+date+'_texas.txt')  
+#    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
+#        for item in galcan:
+#            f.write("%s\n" % item)
     
 
  

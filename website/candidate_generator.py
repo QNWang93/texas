@@ -88,7 +88,8 @@ def Check_type(Table):
 	ind = np.where((Table['spec_class'] == 'SN Ia') | (Table['spec_class'] == 'None'))[0]
 	return ind 
 
-
+def Check_z(Table):
+        return 0
 
 def YSE_list():
 	all_cand = pd.read_csv('https://ziggy.ucolick.org/yse/explorer/54/download?format=csv')

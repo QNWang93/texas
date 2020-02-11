@@ -8,6 +8,7 @@ import glob
 import sys, os, re, types, shutil,copy,random,time
 
 import astropy.io.fits as fits
+from astropy.io import ascii
 import numpy as np
 import pylab
 from   matplotlib.ticker import FormatStrFormatter,MultipleLocator
@@ -37,6 +38,26 @@ def addlink2string(s,link,target=None):
 def addtag2string(s,tag,target=None):
     line = '<a name="%s"></a>%s' % (tag,s)
     return(line)
+
+def save_digit(number, num_digit):
+    d = np.power(10, num_digit)
+    return float(int(number*d))/d
+
+def tab2htmltab(table, header):
+    line = '<td><table cols = %s BORDER=1>\n <tr>' %(len(header)+1)
+    for i in header:
+        line += '<td>'+i + '</td> '
+    line +='</tr>\n'
+    for j in np.arange(len(table)):
+        line += '<tr>'
+        for i in header:
+            if isinstance(table[j][i], float):
+                line += '<td>'+str(save_digit(table[j][i], num_digit=5)) + '</td> ' 
+            else:
+                line += '<td>'+str(table[j][i]) + '</td> '
+        line +='</tr>\n'
+    line += ' </table> </td>\n'
+    return line
 
 class htmltable:
     def __init__(self,Ncols,font=None,fontscale=None,fontsize=None,color=None,bgcolor=None,cellpadding=2,cellspacing=2,border=1,
@@ -127,6 +148,9 @@ class htmltable:
         line += pre + colval + after + '</td>'
             
         self.body.append(line)
+
+    def addtable(self, table, header):
+        self.body.append(tab2htmltab(table, header))
 
     def add_sorttablescript_before_header(self):
         return('<script type="text/javascript" src="sortable.js"></script>')
@@ -262,7 +286,7 @@ class weblesniffclass:
 #        if self.usebinnedflag:
 #            figpattern = '*.bin.%s' % self.figsuffix
 #        else:
-        figpattern = '{name}*_texas.{suffix}'.format(name=self.date, suffix=self.figsuffix)
+        figpattern = '*{name}_texas.{suffix}'.format(name=self.date, suffix=self.figsuffix)
 #        figlc = '20[0-9][0-9]*[0-9][0-9][0-9][0-9]_lc.%s' % self.figsuffix
         
         self.figlist = {}
@@ -270,7 +294,8 @@ class weblesniffclass:
         self.figlist['images']=[]
 #        self.figlist['lc']=[]
         self.figlist['date']=[]
-        imgdir = '%s/%s' % (self.webdir,'plots/'+self.date)
+#        imgdir = '%s/%s' % (self.webdir,'plots/*/')
+        imgdir = './plots/*/'
         print('imgdir=',imgdir, figpattern)
         flist = glob.glob('%s/%s' % (imgdir,figpattern))
         print('flist=',flist)
@@ -289,7 +314,7 @@ class weblesniffclass:
                 self.figlist['target'].append(objname)
                 self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
 
- #               self.figlist['lc']=.append([fnameshort, objname+objdate+'_lc.png'])
+#                self.figlist['lc']=.append([fnameshort, objname+objdate+'_lc.png'])
                 self.figlist['date'].append(objdate)
                 i=i+1
 
@@ -298,6 +323,8 @@ class weblesniffclass:
         webaddress = '%s/%s/index.html#%s' % (self.rootwebaddress,field,tag)
         return(webaddress)
     
+
+
     def makewebpage(self,p='1000'):
         colors4tmpl = [self.bgcolor1imtable,'lightcyan']
         # first, get fig files...
@@ -316,6 +343,7 @@ class weblesniffclass:
         field = os.path.basename(self.webdir)
         imcounter = 0
         print(self.figlist['images'])
+        img_dir = os.getcwd()+'/plots/'
         if len(self.figlist['images'])>0:
             for target in self.figlist['target']:
                 infotable.startrow()
@@ -332,15 +360,22 @@ class weblesniffclass:
                 #s+='   '+addlink2string('tarcmd','%d/tarcmd.txt' % ccd)
                 #s+='</font>'
                 infotable.addcol(s, color = 'white', bgcolor = 'red', fontsize=20)
+                infotable.addcol(self.figlist['date'][imcounter], fontsize=10)
+
                 infotable.endrow()
                 tmplcounter=0
                 print('figlist=', self.figlist)
 
                 img = self.figlist['images'][imcounter]
-                #print('img=',img)
+#                print('img=',img)
                 infotable.startrow()
-                infotable.addcol('', bgcolor=colors4tmpl[imcounter % 2])
-                infotable.addcol(self.figlist['date'][imcounter], fontsize=10)
+                infotable.addcol('')
+                print(img_dir,target, img)
+                texas_info_file = img_dir+target+ '/'+img[0][0:-4] + '.txt'
+                texas_info_table = ascii.read(texas_info_file)
+                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d']
+                infotable.addtable(texas_info_table, texas_header)
+                infotable.addcol('SN lc info here')
 #                infotable.addcol(details, fontsize=5)
 
 
@@ -368,11 +403,11 @@ class weblesniffclass:
 			
 #                        im2 = re.sub('texas', 'lc',im1)
 #                        print('im1&2 = ', im1, im2)
-                        
-                s = addlink2string(imagestring4web(img[0],width=None,height=500),img[0])
+
+                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=None,height=500),img_dir+target+ '/'+ img[0])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
-                s = addlink2string(imagestring4web(img[1],width=None,height=500),img[1])
+                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=None,height=500),img_dir+target+ '/'+ img[1])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 infotable.endrow()
@@ -398,7 +433,7 @@ def main(args):
     #parser = weblesniff.define_options()
     #args = parser.parse_args()
 
-
+    print(1)
     weblesniff.webdir = args[0]#.webdir
     weblesniff.date = str(args[1])#.date)
     weblesniff.imagelist_htmltemplate = args[2]#.imagelist_htmltemplate
@@ -406,7 +441,7 @@ def main(args):
     #if type(args[4]) == int:
     #    if args[4]>=1:
     #        print("webdir:    {}".format(weblesniff.webdir))
-        
+    print(2)
     if args[3] != None:
         weblesniff.figsuffix = args[3]#.figsuffix
     #weblesniff.usebinnedflag = args.usebinned
