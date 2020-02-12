@@ -6,7 +6,7 @@ A. Rest
 import argparse
 import glob
 import sys, os, re, types, shutil,copy,random,time
-
+import astropy
 import astropy.io.fits as fits
 from astropy.io import ascii
 import numpy as np
@@ -256,9 +256,12 @@ class weblesniffclass:
 
         self.webdir = None
         self.imagelist_htmltemplate = None
+        self.imagelist_htmltemplate = None
 
         self.imagetableheaderfontscale = "+1"
+        self.target_list = astropy.table.Table()
         self.imagetablefontscale = None
+
 
         self.font = 'sans-serif'
         self.bgcolor1imtable = '#%02x%02x%02x' % (255,255,220)
@@ -283,9 +286,7 @@ class weblesniffclass:
         return(parser)
 
     def getfiglist(self):
-#        if self.usebinnedflag:
-#            figpattern = '*.bin.%s' % self.figsuffix
-#        else:
+
         figpattern = '*{name}_texas.{suffix}'.format(name=self.date, suffix=self.figsuffix)
 #        figlc = '20[0-9][0-9]*[0-9][0-9][0-9][0-9]_lc.%s' % self.figsuffix
         
@@ -296,27 +297,34 @@ class weblesniffclass:
         self.figlist['date']=[]
 #        imgdir = '%s/%s' % (self.webdir,'plots/*/')
         imgdir = './plots/*/'
-        print('imgdir=',imgdir, figpattern)
-        flist = glob.glob('%s/%s' % (imgdir,figpattern))
-        print('flist=',flist)
-        if len(flist)>0:
-            i=0
-            for fname in flist:
-                fnameshort = os.path.relpath(fname,start=self.webdir)
-                print(fnameshort)
-                print(re.search('\d+\D+\d+_', fnameshort).group())
-                objname = re.search('\d+\D+\d+_', fnameshort).group()[:-5]
-                objdate = re.search('\d+\D+\d+_', fnameshort).group()[-5:-1]
+#        print('imgdir=',imgdir, figpattern)
+        if len(self.target_list) ==0:
+            flist = glob.glob('%s/%s' % (imgdir,figpattern))
+#        print('flist=',flist)
+            if len(flist)>0:
+                i=0
+                for fname in flist:
+                    fnameshort = os.path.relpath(fname,start=self.webdir)
+#                print(fnameshort)
+#                print(re.search('\d+\D+\d+_', fnameshort).group())
+                    objname = re.search('\d+\D+\d+_', fnameshort).group()[:-5]
+                    objdate = re.search('\d+\D+\d+_', fnameshort).group()[-5:-1]
 #                    m = re.search('\w+\d+\.',fnameshort)#'\w+\d+\_+\d+\.',fnameshort)
 #                    print(m)
-                print(objname, objdate)
-                imname = objname+objdate+'_texas.png'
-                self.figlist['target'].append(objname)
-                self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
+                    print(objname, objdate)
+                    imname = objname+objdate+'_texas.png'
+                    self.figlist['target'].append(objname)
+                    self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
 
 #                self.figlist['lc']=.append([fnameshort, objname+objdate+'_lc.png'])
-                self.figlist['date'].append(objdate)
-                i=i+1
+                    self.figlist['date'].append(objdate)
+                    i=i+1
+        else: 
+            for target in self.target_list:
+                self.figlist['target'].append(target['Name'])
+                self.figlist['date'].append(self.date)
+                imname = target['Name'] + self.date + '_texas.png'
+                self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
 
     def getwebaddress(self,field,tag=None):
         if self.rootwebaddress == None: return None
@@ -342,7 +350,7 @@ class weblesniffclass:
         infotable = htmltable(2,border=1,cellspacing=0,cellpadding=2,width='1000px',textalign='center',verticalalign='center',fontscale=self.imagetablefontscale,font=self.font,bgcolor=self.bgcolor1imtable)
         field = os.path.basename(self.webdir)
         imcounter = 0
-        print(self.figlist['images'])
+#        print(self.figlist['images'])
         img_dir = os.getcwd()+'/plots/'
         if len(self.figlist['images'])>0:
             for target in self.figlist['target']:
@@ -364,14 +372,14 @@ class weblesniffclass:
 
                 infotable.endrow()
                 tmplcounter=0
-                print('figlist=', self.figlist)
+#                print('figlist=', self.figlist)
 
                 img = self.figlist['images'][imcounter]
 #                print('img=',img)
                 infotable.startrow()
                 infotable.addcol('')
-                print(img_dir,target, img)
-                texas_info_file = img_dir+target+ '/'+img[0][0:-4] + '.txt'
+#                print(img_dir,target, img)img_dir+target+ '/'+
+                texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
                 texas_info_table = ascii.read(texas_info_file)
                 texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d']
                 infotable.addtable(texas_info_table, texas_header)
@@ -405,6 +413,7 @@ class weblesniffclass:
 #                        print('im1&2 = ', im1, im2)
 
                 s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=None,height=500),img_dir+target+ '/'+ img[0])
+                print(img_dir,target,img[0])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=None,height=500),img_dir+target+ '/'+ img[1])
@@ -433,7 +442,7 @@ def main(args):
     #parser = weblesniff.define_options()
     #args = parser.parse_args()
 
-    print(1)
+
     weblesniff.webdir = args[0]#.webdir
     weblesniff.date = str(args[1])#.date)
     weblesniff.imagelist_htmltemplate = args[2]#.imagelist_htmltemplate
@@ -441,9 +450,11 @@ def main(args):
     #if type(args[4]) == int:
     #    if args[4]>=1:
     #        print("webdir:    {}".format(weblesniff.webdir))
-    print(2)
+
     if args[3] != None:
         weblesniff.figsuffix = args[3]#.figsuffix
+    if len(args)>4:
+        weblesniff.target_list = args[4]#.figsuffix
     #weblesniff.usebinnedflag = args.usebinned
     weblesniff.rootwebaddress = None#args.rootwebaddress
         

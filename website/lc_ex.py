@@ -22,7 +22,9 @@ def tess_obs(ra, dec):
         2458490.5,2458516.5,2458542.5,2458568.5,2458595.5,2458624.5,
         2458653.5,2458682.5,2458710.5,2458737.5,2458763.5,2458789.5,
         2458814.5,2458841.5,2458869.5,2458897.5,2458926.5,2458955.5,
-        2458982.5,2459008.5,2459034.5]
+        2458982.5,2459008.5,2459034.5, 2459060.5, 2459087.5, 2459114.5,      
+        2459143.5,2459172.5,2459200.5,2459227.5,2459254.5,2459280.5,2459306.5,
+        2459332.5,2459360.5,2459389.5]
 
     url = 'https://heasarc.gsfc.nasa.gov/cgi-bin/tess/webtess/'
     url += 'wtv.py?Entry={ra}%2C{dec}'
@@ -53,9 +55,15 @@ def to_array(somelist, column, start = 1):
     return array
 
 def search_atlas(ra, dec):
-    gateway_session1 = SSHSession('10.162.61.62','minix', password='123456').open()
-    gateway_session2 = gateway_session1.get_remote_session('atlas-base-adm01.ifa.hawaii.edu', username = 'qinan' ,password='PRBNAhK93bMc88Qn')
-    remote_session = gateway_session2.get_remote_session('atlas-base-db07.ifa.hawaii.edu',password='PRBNAhK93bMc88Qn')
+    atlas_info = ascii.read('atlas_params.ini', names = ['address', 'username', 'password'])
+    gateway_session1 = SSHSession(atlas_info[0]['address'],atlas_info[0]['username'], password=atlas_info[0]['password']).open()
+    if len(atlas_info)==3:
+        gateway_session2 = gateway_session1.get_remote_session(atlas_info[1]['address'],atlas_info[1]['username'], password=atlas_info[2]['password'])
+        remote_session = gateway_session2.get_remote_session(atlas_info[2]['address'], password=atlas_info[2]['password'])
+    elif len(atlas_info)==2:
+        remote_session = gateway_session1.get_remote_session(atlas_info[1]['address'], password=atlas_info[1]['password'])
+    else: 
+        print('wrong format for atlas_params: too many jump connection')
 
     today = dt.today()
     con = sqlite3.connect(":memory:")
@@ -103,7 +111,7 @@ def plot(lc, survey):
         plt.errorbar(jd, mag, err, label = survey + i, fmt='o')
 
     ax = plt.gca()
-    ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
+
 
     #ax.grid(True)
     return ax
@@ -151,9 +159,10 @@ def main(argv):
         atlas_lc = search_atlas(ra, dec)
         if len(atlas_lc)>0:
             ax = plot(atlas_lc, 'atlas ')
+        ax.set_ylim(max([max(lc['mag']), max(atlas_lc['mag'])])+0.5, min([min(lc['mag']), min(atlas_lc['mag'])]) -0.5)
     except:
         print('unable to get atlas lc')
-
+        ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
     
     tess_ob = tess_obs(ra, dec)
     i = 0
@@ -175,12 +184,14 @@ def main(argv):
     ax.legend()
 
     fig.savefig(out_fig)
-    ascii.write(galcan, home_dir+name+date+'_texas.txt')  
+    ascii.write(galcan, home_dir+name+date+'_texas.txt', overwrite=True)  
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:
 #            f.write("%s\n" % item)
-    
-
+    if len(galcan)>0:
+        return galcan[0]['z']
+    else:
+        return None
  
 
 if __name__ == "__main__":
