@@ -71,14 +71,14 @@ def search_atlas(ra, dec):
 
     result=remote_session.get_cmd_output('./mod_force.sh '+str(ra)+' '+ str(dec)+tdate)
 
-    atlas_lc = at.Table(names=('jd','mag', 'mag_err', 'filter'), dtype=('f8', 'f8', 'f8', 'S1'))
+    atlas_lc = at.Table(names=('jd','mag', 'mag_err','flux', 'fluxerr', 'filter', 'zp', 'zpsys'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'S1' ,'f8', 'U8'))
 
     split = result.split('\r\n')
 
     for i in split[1:]:
         k = i.split()
         if int(k[3])>int(k[4]):
-            atlas_lc.add_row([float(k[0]), float(k[1]), float(k[2]), k[5]])
+            atlas_lc.add_row([float(k[0]), float(k[1]), float(k[2]), float(k[3]), float(k[4]), k[5],  float(k[17]), 'ab'])
 
     return atlas_lc
 
@@ -152,17 +152,20 @@ def main(argv):
     
     fig, ax = plt.subplots()
 
-    if len(lc)>0:
-        ax = plot(lc, 'ztf ')
-
     try:
         atlas_lc = search_atlas(ra, dec)
         if len(atlas_lc)>0:
+            ascii.write(atlas_lc, home_dir+name+date+'_atlas.csv', overwrite=True)
             ax = plot(atlas_lc, 'atlas ')
-        ax.set_ylim(max([max(lc['mag']), max(atlas_lc['mag'])])+0.5, min([min(lc['mag']), min(atlas_lc['mag'])]) -0.5)
+            if len(lc)>0: 
+                ax = plot(lc, 'ztf ')
+                ax.set_ylim(max([max(lc['mag']), max(atlas_lc['mag'])])+0.5, min([min(lc['mag']), min(atlas_lc['mag'])]) -0.5)
+            else:
+                ax.set_ylim(max(atlas_lc['mag'])+0.5, min(atlas_lc['mag'])-0.5)
     except:
         print('unable to get atlas lc')
-        ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
+        if len(lc)>0:
+            ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
     
     tess_ob = tess_obs(ra, dec)
     i = 0
