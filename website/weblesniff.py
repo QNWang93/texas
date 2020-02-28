@@ -312,9 +312,9 @@ class weblesniffclass:
 #                    m = re.search('\w+\d+\.',fnameshort)#'\w+\d+\_+\d+\.',fnameshort)
 #                    print(m)
                     print(objname, objdate)
-                    imname = objname+objdate+'_texas.png'
+                    imname = objname+'_texas.png'
                     self.figlist['target'].append(objname)
-                    self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
+                    self.figlist['images'].append([imname, objname+objdate+'_lc.png'])
 
 #                self.figlist['lc']=.append([fnameshort, objname+objdate+'_lc.png'])
                     self.figlist['date'].append(objdate)
@@ -323,8 +323,8 @@ class weblesniffclass:
             for target in self.target_list:
                 self.figlist['target'].append(target['Name'])
                 self.figlist['date'].append(self.date)
-                imname = target['Name'] + self.date + '_texas.png'
-                self.figlist['images'].append([imname, re.sub('texas', 'lc',imname)])
+                imname = target['Name'] + '_texas.png'
+                self.figlist['images'].append([imname, target['Name']+self.date+'_lc.png'])
 
     def getwebaddress(self,field,tag=None):
         if self.rootwebaddress == None: return None
@@ -380,8 +380,12 @@ class weblesniffclass:
                 infotable.addcol('')
 #                print(img_dir,target, img)img_dir+target+ '/'+
                 texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
-                texas_info_table = ascii.read(texas_info_file)
-                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d']
+#                print(texas_info_file)
+                try:
+                    texas_info_table = ascii.read(texas_info_file)
+                except: 
+                    texas_info_table = ascii.read('./texas_table_sample.txt')
+                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']
                 infotable.addtable(texas_info_table, texas_header)
                 infotable.addcol('SN lc info here')
 #                infotable.addcol(details, fontsize=5)
@@ -413,10 +417,13 @@ class weblesniffclass:
 #                        print('im1&2 = ', im1, im2)
 
                 s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=None,height=500),img_dir+target+ '/'+ img[0])
-                print(img_dir,target,img[0])
+#                print(img_dir,target,img[0])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
-                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=None,height=500),img_dir+target+ '/'+ img[1])
+                try:
+                    s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=None,height=500),img_dir+target+ '/'+ img[1])
+                except:
+                    print('no texas for xxx')
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 infotable.endrow()

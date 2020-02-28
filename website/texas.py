@@ -26,6 +26,7 @@ import random
 from astropy.visualization import PercentileInterval, AsinhStretch
 import getopt
 from matplotlib.backends.backend_pdf import PdfPages
+from config import texas_cfg
 
 
 try: # Python 3.x
@@ -86,7 +87,7 @@ def geturl(ra, dec, size=240, output_size=None, filters="grizy", format="jpg", c
     table = getimages(ra,dec,size=size,filters=filters)
     url = ("https://ps1images.stsci.edu/cgi-bin/fitscut.cgi?"
            "ra={ra}&dec={dec}&size="+str(size)+"&format={format}").format(**locals())
-    print(url)
+
     if output_size:
         url = url + "&output_size={}".format(output_size)
     # sort filters from red to blue
@@ -103,6 +104,7 @@ def geturl(ra, dec, size=240, output_size=None, filters="grizy", format="jpg", c
         url = []
         for filename in table['filename']:
             url.append(urlbase+filename)
+    print(url)
     return url
 
 
@@ -196,7 +198,7 @@ def sourcesearch_glade(ra, dec, radius):#radius in unit of arcmin
 
 def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
 
-    d = np.sqrt((dec-decMean)*(dec-decMean) + (ra-raMean)*(ra-raMean)*np.cos(dec/180*np.pi)*np.cos(dec/180*np.pi))
+    d = np.sqrt((dec-decMean)**2 + (ra-raMean)**2*np.cos(dec/180*np.pi)**2)
     theta2=np.arctan((dec-decMean)/(ra-raMean))*180./np.pi
     if raMean>ra:
         theta=theta1+theta2
@@ -211,7 +213,7 @@ def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
 
     nor_d = d*3600/r
 
-    return nor_d
+    return d*3600., nor_d
 
 def rearrange(s_list, column_name):
     for i in np.arange(len(s_list)):
@@ -229,8 +231,9 @@ def ser_rearrange(s_list, ra, dec):
         return None
 
     s_list['norm_dist'] = 999999.
+    s_list['dist'] = 999999.
     for s in s_list :
-        n_radius=2
+        n_radius=texas_cfg['n_radius']
         theta1 = s['gSerPhi']#rot angle
         a1= s['gSerRadius'] 
         b1= a1*s['gSerAb']
@@ -239,9 +242,9 @@ def ser_rearrange(s_list, ra, dec):
             continue 
         
         #make fitted image
-        nor_d = nor_sep(ra, dec, s['raMean'], s['decMean'], a1, b1, theta1)
+        d, nor_d = nor_sep(ra, dec, s['raMean'], s['decMean'], a1, b1, theta1)
         s['norm_dist'] = nor_d
-
+        s['dist'] = d
         
     s_list = rearrange(s_list, 'norm_dist')
     
@@ -251,18 +254,17 @@ def plot_ellipse(s_list, ra, dec, size, color, ax):
     i=0
     if len(s_list) == 0:
         return None
-
+    filter = texas_cfg['filters']
     for s in s_list :
         x0, y0 = ((ra-s['raMean'])*4*3600*np.cos(s['decMean']/180*np.pi)+(size/2)), (s['decMean']-dec)*4*3600+(size/2)
         i=i+1
         
         y, x = np.mgrid[0:size, 0:size]# 4 pixel for 1 arcsec for PS1, here image size is set to be 20"*20", depend on your cutout image size
         #make fitted image
-        n_radius=2
-        theta1 = s['gSerPhi']#rot angle
-        a1= s['gSerRadius'] 
-        b1= a1*s['gSerAb']
-#        print(s['gSerRadius'] , s['gSerAb'])
+        n_radius=texas_cfg['n_radius']
+        theta1 = s[filter+'SerPhi']#rot angle
+        a1= s[filter+'SerRadius'] 
+        b1= a1*s[filter+'SerAb']
         e1 = mpatches.Ellipse((x0, y0), 2*4*n_radius*a1, 2*4*n_radius*b1, theta1, edgecolor=color,
                               facecolor='none',  label='source 1')    # 4pix/arcsec * n_radius*a, 4pix/arcsec * n_radius*a*b/a 
         if 'z' in s_list.colnames:
@@ -272,9 +274,9 @@ def plot_ellipse(s_list, ra, dec, size, color, ax):
 #            ax.annotate('z='+str(int(s['z']*100000)/100000.0), xy=(x0+10, y0+35), fontsize=15, ha="center", color='purple')
 #            print('redshift of texas host'+str(i)+':   '+str(int(s['z']*1000)/1000.0))
 #        else:
-            if x0<0 or x0>size or y0<0 or y0>size or s['gSerRadius']<0 or s['gSerChisq']>100:
+            if x0<0 or x0>size or y0<0 or y0>size or s[filter+'SerRadius']<0 or s[filter+'SerChisq']>100:
                 continue
-#        ax.plot([size/2, x0], [size/2, y0], 'k', ls=':')
+
         
         ax.add_patch(e1)
 
@@ -426,32 +428,32 @@ def plot(ra, dec, bfim, gal_list, s_list, ser_list, catalogue, search_size, file
     plt.savefig(filename)
 
 def main(argv):
-    try:                          
-        opts, args = getopt.getopt(argv, "hi:c:n:p:d", ["help", "catalogue", "PS_WSID", "PS_password"])      
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
+#    try:                          
+#        opts, args = getopt.getopt(argv, "hi:c:n:p:d", ["help", "catalogue", "PS_WSID", "PS_password"])      
+#    except getopt.GetoptError:
+#        usage()
+#        sys.exit(2)
 
-    catalogue='glade'
-    do_im = True
-    os.environ['CASJOBS_WSID'] = '1827319063'
-    os.environ['CASJOBS_PW'] = '123456789'
+    catalogue=texas_cfg['catalogue']
+    do_im = texas_cfg['do_im']
+    os.environ['CASJOBS_WSID'] = texas_cfg['casjob_id']
+    os.environ['CASJOBS_PW'] = texas_cfg['casjob_pw']
 
-    for opt, arg in opts:                
-        if opt in ("-h", "--help"):       
-            usage()                     
-            sys.exit()                  
-        elif opt == '-d':                
-            global _debug               
-            _debug = 1                  
-        elif opt in ("-c", "--catalogue="): 
-            catalogue = arg               
-        elif opt in ('-n', 'PS_WSID'):                
-            os.environ['CASJOBS_WSID'] = arg
-        elif opt in ('-p', 'PS_password'):                
-            os.environ['CASJOBS_PW'] = arg
-        elif opt in ('-i', 'do_im'):                
-            do_im = arg
+#    for opt, arg in opts:                
+#        if opt in ("-h", "--help"):       
+#            usage()                     
+#            sys.exit()                  
+#        elif opt == '-d':                
+#            global _debug               
+#            _debug = 1                  
+#        elif opt in ("-c", "--catalogue="): 
+#            catalogue = arg               
+ #       elif opt in ('-n', 'PS_WSID'):                
+ #           os.environ['CASJOBS_WSID'] = arg
+ #       elif opt in ('-p', 'PS_password'):                
+ #           os.environ['CASJOBS_PW'] = arg
+ #       elif opt in ('-i', 'do_im'):                
+ #           do_im = arg
     ra = float(argv[0])
     dec = float(argv[1])
     search_size = int(argv[2])
@@ -459,12 +461,12 @@ def main(argv):
         filename = argv[3]
 #    print(argv)
     size = 240*search_size  #PS cutout image size, 240*sidelength in arcmin
-    galac_search_size = 1
+    galac_search_size = texas_cfg['point_search_rad']
 
     #get PS image
 	 
     #downloading image part
-    fitsurl = geturl(ra, dec, size=240*search_size, filters="i", format="fits")
+    fitsurl = geturl(ra, dec, size=240*search_size, filters=texas_cfg['filter'], format="fits")
     fh = fits.open(fitsurl[0])
     fim = fh[0].data
     fim[np.isnan(fim)] = 0.
@@ -479,6 +481,7 @@ def main(argv):
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
         if len(gal_list)>0:
             gal_list['norm_d'] = 99999.
+            gal_list['d'] = 99999.
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
     else:
@@ -512,6 +515,7 @@ def main(argv):
                     s['ra_glade'] = j[6]
                     s['dec_glade'] = j[7]
                     j['norm_d'] = s['norm_dist']
+                    j['d'] = s['dist']
                     gal_can.append(s)
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')

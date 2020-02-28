@@ -15,16 +15,11 @@ from datetime import datetime as dt
 import requests, re
 import texas
 from astropy.io import ascii
+from config import lc_cfg
 
 def tess_obs(ra, dec):
 
-    tess_date = [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,2458463.5,
-        2458490.5,2458516.5,2458542.5,2458568.5,2458595.5,2458624.5,
-        2458653.5,2458682.5,2458710.5,2458737.5,2458763.5,2458789.5,
-        2458814.5,2458841.5,2458869.5,2458897.5,2458926.5,2458955.5,
-        2458982.5,2459008.5,2459034.5, 2459060.5, 2459087.5, 2459114.5,      
-        2459143.5,2459172.5,2459200.5,2459227.5,2459254.5,2459280.5,2459306.5,
-        2459332.5,2459360.5,2459389.5]
+    tess_date = lc_cfg['tess_date']
 
     url = 'https://heasarc.gsfc.nasa.gov/cgi-bin/tess/webtess/'
     url += 'wtv.py?Entry={ra}%2C{dec}'
@@ -55,7 +50,7 @@ def to_array(somelist, column, start = 1):
     return array
 
 def search_atlas(ra, dec):
-    atlas_info = ascii.read('atlas_params.ini', names = ['address', 'username', 'password'])
+    atlas_info = lc_cfg['atlas_info']
     gateway_session1 = SSHSession(atlas_info[0]['address'],atlas_info[0]['username'], password=atlas_info[0]['password']).open()
     if len(atlas_info)==3:
         gateway_session2 = gateway_session1.get_remote_session(atlas_info[1]['address'],atlas_info[1]['username'], password=atlas_info[2]['password'])
@@ -67,7 +62,7 @@ def search_atlas(ra, dec):
 
     today = dt.today()
     con = sqlite3.connect(":memory:")
-    tdate = ' '+str(list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-40-2400000)
+    tdate = ' '+str(list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-lc_cfg['lookback_days']-2400000)
 
     result=remote_session.get_cmd_output('./mod_force.sh '+str(ra)+' '+ str(dec)+tdate)
 
@@ -135,14 +130,21 @@ def main(argv):
     date = argv[3]
     name = argv[2]
     
-    home_dir = "./plots/"+name+'/'
+    home_dir = lc_cfg['home_dir']+name+'/'
     Save_space(home_dir)
 
     out_fig = home_dir + name + date + '_lc'
 
 #    print([ra, dec, '3', name + date+'_texas'])
-    galcan = texas.main([argv[0], argv[1], '3', home_dir + name + date+'_texas'])
-
+    if os.path.exists(home_dir+name+'_texas.txt'):
+        galcan = ascii.read(home_dir+name+'_texas.txt')
+    else:
+        try:
+            galcan = texas.main([argv[0], argv[1], '3', home_dir + name + '_texas'])
+            ascii.write(galcan, home_dir+name+'_texas.txt', overwrite=True)  
+        except:
+            print('unable to access PanSTARRS')
+        
     ra = float(ra)
     dec = float(dec)
     
@@ -172,10 +174,10 @@ def main(argv):
     for [t1, t2] in tess_ob:
         x= np.arange(t1-2400000, t2-2400000, 0.1)
         if i == 0:
-            ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
+            ax.fill_between(x, 10, 24, facecolor='grey', alpha=0.5, label = 'TESS')
             i += 1
         else:
-            ax.fill_between(x, 10, 22, facecolor='grey', alpha=0.5)
+            ax.fill_between(x, 10, 24, facecolor='grey', alpha=0.5)
     #print(tess_ob)
     ax.legend()
 
@@ -183,11 +185,11 @@ def main(argv):
     con = sqlite3.connect(":memory:")
     tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
     ax.axvline(x=tdate, color = 'k', label = 'today')
-    ax.set_xlim(tdate-40, tdate+10)
+    ax.set_xlim(tdate+lc_cfg['xlim'][0], tdate+lc_cfg['xlim'][1])
     ax.legend()
 
     fig.savefig(out_fig)
-    ascii.write(galcan, home_dir+name+date+'_texas.txt', overwrite=True)  
+
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:
 #            f.write("%s\n" % item)

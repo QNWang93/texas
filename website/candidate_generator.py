@@ -66,13 +66,15 @@ def Check_extinction(Table):
 
 def Check_point(Table):
 	ind = []
+	print(Table['point_source_probability'])
 	for i in range(len(Table)):
-		if np.isfinite(Table['point_source_probability'][i]):
+		if np.isfinite(Table['point_source_probability'][i]) and Table['point_source_probability'][i] is not None:
 			if Table['point_source_probability'][i] <= 0.8:
 				ind += [i]
 		else:
 			ind += [i]
 	return ind
+
 
 def Gal_coord(Table):
 	l = []
