@@ -39,11 +39,15 @@ lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,245846
         2458982.5,2459008.5,2459034.5, 2459060.5, 2459087.5, 2459114.5,      
         2459143.5,2459172.5,2459200.5,2459227.5,2459254.5,2459280.5,2459306.5,
         2459332.5,2459360.5,2459389.5],
+        
         'home_dir': './plots/', #where you put targets and plots
+        
         'xlim': [-40, 10], #x-axis limit for plots
-        'atlas_info': [{'address':'', 'username':'', 'password':''},   #first one is optional
+        
+        'atlas_info': [{'address':'', 'username':'', 'password':''},   
             {'address':'', 'username':'', 'password':''},
-            {'address':'', 'username':'', 'password':''}],
+            {'address':'', 'username':'', 'password':''}],#first one is optional
+            
         'lookback_days':40
         }
 
