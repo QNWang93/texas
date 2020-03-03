@@ -21,18 +21,18 @@ format of config.py:
 
 
 
-#!/usr/bin/env python
+         #!/usr/bin/env python
 
-#import preprocessing
+         #import preprocessing
 
-texas_cfg = {'n_radius': 2,
+         texas_cfg = {'n_radius': 2,
          'casjob_id': '',
          'casjob_pw': ,
          'catalogue': 'glade',
          'do_im': True,
          'point_search_rad' : 1,
          'filters':'i'}
-lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,2458463.5,
+         lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,2458463.5,
         2458490.5,2458516.5,2458542.5,2458568.5,2458595.5,2458624.5,
         2458653.5,2458682.5,2458710.5,2458737.5,2458763.5,2458789.5,
         2458814.5,2458841.5,2458869.5,2458897.5,2458926.5,2458955.5,
