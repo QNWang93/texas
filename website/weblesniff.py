@@ -337,7 +337,7 @@ class weblesniffclass:
         colors4tmpl = [self.bgcolor1imtable,'lightcyan']
         # first, get fig files...
         self.getfiglist()
-        
+        cans = ascii.read('candidates.csv')
 #        print(self.date, self.webdir)
         self.webfilename = '%s/%s.html' % (self.webdir, self.date)
         webpage = webpageclass()
@@ -368,7 +368,13 @@ class weblesniffclass:
                 #s+='   '+addlink2string('tarcmd','%d/tarcmd.txt' % ccd)
                 #s+='</font>'
                 infotable.addcol(s, color = 'white', bgcolor = 'red', fontsize=20)
-                infotable.addcol(self.figlist['date'][imcounter], fontsize=10)
+#                infotable.addcol(self.figlist['date'][imcounter], fontsize=10)
+
+                t_info = cans[cans['Name']==target]
+                try:
+                    infotable.addtable(t_info, t_info.colnames)
+                except:
+                    infotable.addcol('')
 
                 infotable.endrow()
                 tmplcounter=0
@@ -435,7 +441,7 @@ class weblesniffclass:
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
        
         print('### Saving ',self.webfilename)
-        webpage.savepage('./%s/%s' % (self.date,self.webfilename))
+        webpage.savepage('./%s/%s' % ('pages',self.webfilename))
 
         del webpage
 

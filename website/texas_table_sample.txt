@@ -1,0 +1,1 @@
+PGC GWGC HyperLEDA 2MASS SDSS-DR12 Gal_flag ra dec dist dist_err z B B_err B_Abs J J_err H H_err K K_err z_flag v_corr_flag

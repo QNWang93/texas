@@ -11,6 +11,17 @@ from astropy.time import Time
 
 import warnings
 warnings.filterwarnings("ignore")
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+def get_gglsheet():
+# use creds to create a client to interact with the Google Drive API
+    scope = ['https://spreadsheets.google.com/feeds',
+		'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("texas").sheet1
+    return sheet
 
 def Rise_covered(Table):
 	"""
@@ -91,7 +102,7 @@ def Check_type(Table):
 	return ind 
 
 def Check_z(Table):
-        return 0
+	return 0
 
 def YSE_list():
 	all_cand = pd.read_csv('https://ziggy.ucolick.org/yse/explorer/54/download?format=csv')
@@ -134,7 +145,11 @@ def YSE_list():
 	ind = np.where(df['Type'].isna())[0]
 	df['Type'].iloc[ind] = 'Phot ' + good['phot_class'].iloc[ind]
 	df['PS prob'] = good['point_source_probability']
+	ind2 = np.where(df['PS prob'].isna())[0]
+	df['PS prob'].iloc[ind2] = 'None'
 	df['Redshift'] = good['transient_z']
+	ind3 = np.where(df['Redshift'].isna())[0]
+	df['Redshift'].iloc[ind3] = 'None'
 	df['MW E(B-V)'] = good['mw_ebv']
 	
 	return df
@@ -145,25 +160,35 @@ def Update_sheet():
 	Updates the sheet.
 
 	"""
-	filename = './candidates.csv'
-	web = pd.read_csv(filename)
+#	filename = './candidates.csv'
+#	web = pd.read_csv(filename)
+
+	sheet = get_gglsheet()
+	st_cont = sheet.get_all_values()
+	headers = st_cont.pop(0)
+	web = pd.DataFrame(st_cont, columns=headers)
 	df = YSE_list()
-	print(web.keys())
+#	print(web.keys())
 	for i in range(len(df['Name'])):
 		name = df['Name'][i]
+		row = [df[col][i] for col in df.columns]
 		if (web['Name'] == name).any():
-			ind = np.where(web['Name'] == name)[0]
-			for col in df.columns:
-				web[col].iloc[ind] = df[col].iloc[i]
+			ind = int(np.where(web['Name'] == name)[0][0])+2
+#			print('ind=', ind)
+			sheet.delete_row(ind)
+			sheet.insert_row(row, ind)
+#			for col in df.columns:
+#				web[col].iloc[ind] = df[col].iloc[i]
 		else:
 			print('Added ', name)
-			web.loc[-1] = df.iloc[i]
-			web.index = web.index + 1
-			web = web.sort_index()
+			sheet.insert_row(row, 2)
+#			web.loc[-1] = df.iloc[i]
+#			web.index = web.index + 1
+#			web = web.sort_index()
 
-	web.iloc[:,15:] = web.iloc[:,10:].replace({pd.np.nan: ''})
+#	web.iloc[:,15:] = web.iloc[:,10:].replace({pd.np.nan: ''})
 	
-	web.to_csv(filename,index=False)
+#	web.to_csv(filename,index=False)
 	print('Updated')
 	return 
 

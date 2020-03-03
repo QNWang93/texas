@@ -466,7 +466,7 @@ def main(argv):
     #get PS image
 	 
     #downloading image part
-    fitsurl = geturl(ra, dec, size=240*search_size, filters=texas_cfg['filter'], format="fits")
+    fitsurl = geturl(ra, dec, size=240*search_size, filters=texas_cfg['filters'], format="fits")
     fh = fits.open(fitsurl[0])
     fim = fh[0].data
     fim[np.isnan(fim)] = 0.
