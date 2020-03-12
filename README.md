@@ -2,7 +2,7 @@
 
 package dependance:
 
-         astropy pylab gspread oauth2client pandas pygsheets PIL mastcasjobs matplotlib getopt json requests
+         astropy pylab gspread oauth2client pandas pygsheets PIL mastcasjobs matplotlib getopt json requests astroquery
 
 For daily update, run:
 
