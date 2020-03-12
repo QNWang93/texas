@@ -4,15 +4,14 @@ import pandas as pd
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-
+import time
 import pygsheets
 
 from astropy.time import Time 
 
 import warnings
 warnings.filterwarnings("ignore")
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+
 
 def get_gglsheet():
 # use creds to create a client to interact with the Google Drive API
@@ -77,7 +76,7 @@ def Check_extinction(Table):
 
 def Check_point(Table):
 	ind = []
-	print(Table['point_source_probability'])
+#	print(Table['point_source_probability'])
 	for i in range(len(Table)):
 		if np.isfinite(Table['point_source_probability'][i]) and Table['point_source_probability'][i] is not None:
 			if Table['point_source_probability'][i] <= 0.8:
@@ -130,8 +129,7 @@ def YSE_list():
 	df = pd.DataFrame()
 	#df['name'] = good['name'] + '#' + url + good['name'] + '/'
 	links = []
-	#for i in range(len(good['name'])):
-	#	links += ['=HYPERLINK("https://ziggy.ucolick.org/yse/transient_detail/{0}/","{0}")'.format(good['name'].iloc[i])]
+
 	l, b = Gal_coord(good)
 	df['Name'] = good['name'] 
 	df['RA'] = good['transient_RA']
@@ -174,21 +172,17 @@ def Update_sheet():
 		row = [df[col][i] for col in df.columns]
 		if (web['Name'] == name).any():
 			ind = int(np.where(web['Name'] == name)[0][0])+2
-#			print('ind=', ind)
-			sheet.delete_row(ind)
-			sheet.insert_row(row, ind)
-#			for col in df.columns:
-#				web[col].iloc[ind] = df[col].iloc[i]
-		else:
-			print('Added ', name)
-			sheet.insert_row(row, 2)
-#			web.loc[-1] = df.iloc[i]
-#			web.index = web.index + 1
-#			web = web.sort_index()
 
-#	web.iloc[:,15:] = web.iloc[:,10:].replace({pd.np.nan: ''})
-	
-#	web.to_csv(filename,index=False)
+		else:
+			while True:
+				try:
+					sheet.insert_row(row, 2)
+				except:
+					time.sleep(100)
+					print('next round')
+					continue
+				break
+			print('Added ', name)
 	print('Updated')
 	return 
 

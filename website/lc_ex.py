@@ -72,8 +72,8 @@ def search_atlas(ra, dec):
 
     for i in split[1:]:
         k = i.split()
-        if int(k[3])>int(k[4]):
-            atlas_lc.add_row([float(k[0]), float(k[1]), float(k[2]), float(k[3]), float(k[4]), k[5],  float(k[17]), 'ab'])
+#        if int(k[3])>int(k[4]):
+        atlas_lc.add_row([float(k[0]), float(k[1]), float(k[2]), float(k[3]), float(k[4]), k[5],  float(k[17]), 'ab'])
 
     return atlas_lc
 
@@ -95,18 +95,50 @@ def ztf2lc(ztf_obj):
     
     return lc
     
-def plot(lc, survey):
+def plot(ax,lc, survey):
+    if survey =='atlas':
+        limit =lc['flux']<lc['fluxerr']
+    else:
+        limit = lc['mag']>0
+    
+    for i in set(lc['filter']):
+        index = lc['filter']==i
+        jd = lc['jd'][index]
+        if jd[0] > 2400000:
+            jd = jd -2400000
+        mag = abs(lc['mag'][index])
+        err = lc['mag_err'][index]
+        
+        if survey =='atlas':
+            flux = lc['flux'][index]
+            fluxerr = lc['fluxerr'][index]
+
+            limit =flux<fluxerr
+        else:
+            limit = mag<0
+
+        real = [not i for i in limit]
+
+        ax.errorbar(jd[real], mag[real], err[real], label = survey +' ' + i, fmt='o', color = lc_cfg['color'][i])
+#        print(real, limit, mag[real])
+        ax.scatter(jd[limit], mag[limit],c = lc_cfg['color'][i], marker = 7, s =50)
+
+#    ax = plt.gca()
+
+    #ax.grid(True)
+    return ax
+
+def plot_atflux(ax, lc, survey):
     
     for i in set(lc['filter']):
         jd = lc['jd'][lc['filter']==i]
         if jd[0] > 2400000:
             jd = jd -2400000
-        mag = lc['mag'][lc['filter']==i]
-        err = lc['mag_err'][lc['filter']==i]
-        plt.errorbar(jd, mag, err, label = survey + i, fmt='o')
+        flux = lc['flux'][lc['filter']==i]
+        err = lc['fluxerr'][lc['filter']==i]
+        ax.errorbar(jd, flux, err, label = survey +' '+ i, fmt='o',color = lc_cfg['color'][i])
 
-    ax = plt.gca()
-
+#    ax = plt.gca()
 
     #ax.grid(True)
     return ax
@@ -120,6 +152,60 @@ def Save_space(Save):
             os.makedirs(Save)
     except FileExistsError:
         pass
+        
+def lc(ra, dec, out_fig, atlas_data_file):
+    ztf_obj = get_ztf(ra, dec)
+
+    lc = ztf2lc(ztf_obj)
+    
+    fig, (ax1, ax2)=plt.subplots(2, figsize = (6,10), sharex = True)
+
+    try:
+        atlas_lc = search_atlas(ra, dec)
+        if len(atlas_lc)>0:
+            ascii.write(atlas_lc, atlas_data_file, overwrite=True)
+            ax1 = plot(ax1,atlas_lc, 'atlas')
+
+            ax2 = plot_atflux(ax2, atlas_lc, 'atlas')
+
+            ax2.set_ylim(-0.1*max(atlas_lc['flux']), 1.2*max(atlas_lc['flux']))
+            if len(lc)>0: 
+                ax1 = plot(ax1,lc, 'ztf')
+                ax1.set_ylim(max([max(abs(lc['mag'])), max(abs(atlas_lc['mag']))])+0.5, min([min(abs(lc['mag'])), min(abs(atlas_lc['mag']))]) -0.5)
+            else:
+                ax1.set_ylim(max(abs(atlas_lc['mag']))+0.5, min(abs(atlas_lc['mag']))-0.5)
+    except:
+        print('unable to get atlas lc')
+        if len(lc)>0:
+            ax1 = plot(ax1,lc, 'ztf')
+            ax1.set_ylim(max(abs(lc['mag']))+0.5, min(abs(lc['mag']))-0.5)
+    
+    tess_ob = tess_obs(ra, dec)
+    
+    for [t1, t2] in tess_ob:
+        x= np.arange(t1-2400000, t2-2400000, 0.1)
+        ax1.fill_between(x, 10, 24, facecolor='grey', alpha=0.5, label = 'TESS')
+        ax2.fill_between(x, -0.1*max(atlas_lc['flux']), 10000, facecolor='grey', alpha=0.5, label = 'TESS')
+
+
+    today = dt.today()
+    
+    con = sqlite3.connect(":memory:")
+    tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
+    ax1.axvline(x=tdate, color = 'k', label = today.strftime("%m/%d/%Y, %H:%M"))
+    ax1.set_ylabel('Mag')
+    ax1.axhline(y = 18, color = 'grey', linestyle = ':')
+    ax1.text(tdate-20,18.2,'18 mag',fontsize = 20)
+    ax2.axvline(x=tdate, color = 'k', label = 'today')
+    ax2.set_xlabel('MJD')
+    ax2.axhline(y = 0, color = 'k', linestyle = '-.')
+    ax1.set_xlim(tdate+lc_cfg['xlim'][0], tdate+lc_cfg['xlim'][1])
+    ax1.legend()
+    ax2.legend()
+
+    plt.tight_layout()
+
+    fig.savefig(out_fig)
 
 #if __name__ == "__main__":
 def main(argv):
@@ -134,6 +220,7 @@ def main(argv):
     Save_space(home_dir)
 
     out_fig = home_dir + name + date + '_lc'
+    atlas_data_file = home_dir+name+date+'_atlas.csv'
 
 #    print([ra, dec, '3', name + date+'_texas'])
     if os.path.exists(home_dir+name+'_texas.txt'):
@@ -147,48 +234,8 @@ def main(argv):
         
     ra = float(ra)
     dec = float(dec)
-    
-    ztf_obj = get_ztf(ra, dec)
+    lc(ra, dec, out_fig, atlas_data_file)
 
-    lc = ztf2lc(ztf_obj)
-    
-    fig, ax = plt.subplots()
-
-    try:
-        atlas_lc = search_atlas(ra, dec)
-        if len(atlas_lc)>0:
-            ascii.write(atlas_lc, home_dir+name+date+'_atlas.csv', overwrite=True)
-            ax = plot(atlas_lc, 'atlas ')
-            if len(lc)>0: 
-                ax = plot(lc, 'ztf ')
-                ax.set_ylim(max([max(lc['mag']), max(atlas_lc['mag'])])+0.5, min([min(lc['mag']), min(atlas_lc['mag'])]) -0.5)
-            else:
-                ax.set_ylim(max(atlas_lc['mag'])+0.5, min(atlas_lc['mag'])-0.5)
-    except:
-        print('unable to get atlas lc')
-        if len(lc)>0:
-            ax.set_ylim(max(lc['mag'])+0.5, min(lc['mag'])-0.5)
-    
-    tess_ob = tess_obs(ra, dec)
-    i = 0
-    for [t1, t2] in tess_ob:
-        x= np.arange(t1-2400000, t2-2400000, 0.1)
-        if i == 0:
-            ax.fill_between(x, 10, 24, facecolor='grey', alpha=0.5, label = 'TESS')
-            i += 1
-        else:
-            ax.fill_between(x, 10, 24, facecolor='grey', alpha=0.5)
-    #print(tess_ob)
-    ax.legend()
-
-    today = dt.today()
-    con = sqlite3.connect(":memory:")
-    tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
-    ax.axvline(x=tdate, color = 'k', label = 'today')
-    ax.set_xlim(tdate+lc_cfg['xlim'][0], tdate+lc_cfg['xlim'][1])
-    ax.legend()
-
-    fig.savefig(out_fig)
 
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:

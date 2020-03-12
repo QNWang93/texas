@@ -27,6 +27,8 @@ from astropy.visualization import PercentileInterval, AsinhStretch
 import getopt
 from matplotlib.backends.backend_pdf import PdfPages
 from config import texas_cfg
+from astropy.wcs import WCS
+
 
 
 try: # Python 3.x
@@ -280,10 +282,10 @@ def plot_ellipse(s_list, ra, dec, size, color, ax):
         
         ax.add_patch(e1)
 
-    for j in range(len(s_list)):
-        s=s_list[j]
-        x0, y0 = ((ra-s['raMean'])*4*3600*np.cos(s['decMean']/180*np.pi)+(size/2)), (s['decMean']-dec)*4*3600+(size/2)
-        ax.annotate(str(j+1), xy=(x0+20, y0+20), fontsize=15, ha="center", color=color)
+#    for j in range(len(s_list)):
+#        s=s_list[j]
+#        x0, y0 = ((ra-s['raMean'])*4*3600*np.cos(s['decMean']/180*np.pi)+(size/2)), (s['decMean']-dec)*4*3600+(size/2)
+#        ax.annotate(str(j+1), xy=(x0+20, y0+20), fontsize=15, ha="center", color=color)
     
 
 
@@ -399,17 +401,32 @@ def search_s(ra, dec, search_size):
     return(results)
 
 
-def plot(ra, dec, bfim, gal_list, s_list, ser_list, catalogue, search_size, filename):
+def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
 
     size = 240*search_size
+    
+    fitsurl = geturl(ra, dec, size=240*search_size, filters=texas_cfg['filters'], format="fits")
+    fh = fits.open(fitsurl[0])
+    wcs = WCS(fh[0].header)
+    fim = fh[0].data
+    fim[np.isnan(fim)] = 0.
+    transform = AsinhStretch() + PercentileInterval(99)
+    bfim = transform(fim)
+    
     fig, ax = plt.subplots(1,1, figsize=(search_size*3,search_size*3))
+    plt.subplot(projection=wcs)
     plt.imshow(bfim, cmap='summer')#, norm=LogNorm())
-
+    ax = plt.gca()
+    
+    k = 1
     if catalogue == 'glade':
         for j in gal_list:
             x, y = ((ra-j[6])*4*3600*np.cos(j[7]/180*np.pi)+(size/2)), (j[7]-dec)*4*3600+(size/2)
             ax.plot(x,y, 'bx', label = 'glade source')
-            ax.annotate('with z '+str(j[10]), xy=(x+20, y-5), fontsize=15, ha="center", color='b')
+#            print(j[10])
+            z = int(float(j[10])*100000)/100000.
+            ax.annotate(str(k) + ': z='+str(z), xy=(x+20, y-5), fontsize=15, ha="center", color='b')
+            k = k+1
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')
 
@@ -466,16 +483,7 @@ def main(argv):
     #get PS image
 	 
     #downloading image part
-    fitsurl = geturl(ra, dec, size=240*search_size, filters=texas_cfg['filters'], format="fits")
-    fh = fits.open(fitsurl[0])
-    fim = fh[0].data
-    fim[np.isnan(fim)] = 0.
-    transform = AsinhStretch() + PercentileInterval(99)
-    bfim = transform(fim)
-    fig, ax = plt.subplots(1,1, figsize=(search_size*3,search_size*3))
-    plt.imshow(bfim, cmap='summer')#, norm=LogNorm())
-	#ax.plot(size/2,size/2, 'ko')
-	#plot image
+
 
     if catalogue == 'glade':
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
@@ -533,17 +541,17 @@ def main(argv):
 
 
     s_list = search_s(ra, dec, galac_search_size)
-    
+    gal_list = rearrange(gal_list, 'norm_d')
     if do_im:
-        plot(ra, dec, bfim, gal_list, s_list, ser_list, catalogue, search_size, filename)
+        plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
 
-
+    plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
 	#ax.legend()
 	    
 	#plt.show()
 #    fig.text(.5, .05, txt, ha='center',wrap=True)
 #    fig.text(-0.5, .05, '432423424214121342', ha='center',wrap=True)
-    gal_list = rearrange(gal_list, 'norm_d')
+
     return(gal_list)
 	#append necessary information onto plot, modified distance, redshift etc9
 

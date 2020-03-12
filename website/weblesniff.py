@@ -13,7 +13,7 @@ import numpy as np
 import pylab
 from   matplotlib.ticker import FormatStrFormatter,MultipleLocator
 #import lc_ex
-
+from config import web_cfg
 from tools import makepath4file,rmfile
 
 def imagestring4web(imagename,width=None,height=None):
@@ -43,8 +43,8 @@ def save_digit(number, num_digit):
     d = np.power(10, num_digit)
     return float(int(number*d))/d
 
-def tab2htmltab(table, header):
-    line = '<td><table cols = %s BORDER=1>\n <tr>' %(len(header)+1)
+def tab2htmltab(table, header, othercontent):
+    line = '<td><table cols = %s BORDER = 1>\n <tr>' %(len(header)+1)
     for i in header:
         line += '<td>'+i + '</td> '
     line +='</tr>\n'
@@ -55,7 +55,8 @@ def tab2htmltab(table, header):
                 line += '<td>'+str(save_digit(table[j][i], num_digit=5)) + '</td> ' 
             else:
                 line += '<td>'+str(table[j][i]) + '</td> '
-        line +='</tr>\n'
+         
+    line += othercontent+'</tr>\n'
     line += ' </table> </td>\n'
     return line
 
@@ -88,7 +89,7 @@ class htmltable:
                colspan=None,rowspan=None,
                bold=None, italic=None, underline = None, 
                width=None, height=None, 
-               color = None, bgcolor = None, font=None, fontscale=None, fontsize=None):
+               color = None, bgcolor = None, font=None, fontscale=None, fontsize=None, typ = 'td'):
         if colval is None:
             colval = '-'  # placeholder!
             
@@ -124,7 +125,7 @@ class htmltable:
             pre   += '<font color=%s>' % (color)
             after  = '</font>' + after
             
-        line = '<td'
+        line = '<'+typ
         if textalign != None:
             line += ' ALIGN="%s"' % textalign            
         if width != None:
@@ -145,12 +146,12 @@ class htmltable:
         #if line != '<td':
         #    line += ' NOSAVE'
         line += '>'
-        line += pre + colval + after + '</td>'
+        line += pre + colval + after + '</'+typ+'>'
             
         self.body.append(line)
 
-    def addtable(self, table, header):
-        self.body.append(tab2htmltab(table, header))
+    def addtable(self, table, header, othercontent):
+        self.body.append(tab2htmltab(table, header,othercontent))
 
     def add_sorttablescript_before_header(self):
         return('<script type="text/javascript" src="sortable.js"></script>')
@@ -174,7 +175,7 @@ class htmltable:
 
     def gettable(self, sortable=False):
 
-        tableinitstring = '<table '
+        tableinitstring = '<table id="t01"'
         # sortable columns?
         if sortable:
             tableinitstring += 'class="sortable" id="anyid" '
@@ -221,18 +222,19 @@ class webpageclass:
     def substituteplaceholder(self, pattern2find, newlines,count=0):
         import types
         patternobject = re.compile(pattern2find)
+
         if type(newlines) is str:
             s = newlines
         elif type(newlines) is list:
             s = '\n'.join(newlines)
         else:
-            raise(RuntimeError,'Error: unknown type,  dont know how to deal with ',newlines)
+            raise RuntimeError('Error: unknown type, dont know how to deal with ')
         for i in range(len(self.lines)):
             self.lines[i] = patternobject.sub(s,self.lines[i])
         
     def loaddefaultpage(self,filename):
         if not os.path.isfile(filename):
-            raise(RuntimeError,'ERROR: could not find file '+filename)
+            raise RuntimeError('ERROR: could not find file '+filename)
         self.lines = open(filename).readlines()
 
     def savepage(self,filename):
@@ -297,20 +299,18 @@ class weblesniffclass:
         self.figlist['date']=[]
 #        imgdir = '%s/%s' % (self.webdir,'plots/*/')
         imgdir = './plots/*/'
-#        print('imgdir=',imgdir, figpattern)
         if len(self.target_list) ==0:
             flist = glob.glob('%s/%s' % (imgdir,figpattern))
-#        print('flist=',flist)
+
             if len(flist)>0:
                 i=0
                 for fname in flist:
                     fnameshort = os.path.relpath(fname,start=self.webdir)
-#                print(fnameshort)
-#                print(re.search('\d+\D+\d+_', fnameshort).group())
+
                     objname = re.search('\d+\D+\d+_', fnameshort).group()[:-5]
                     objdate = re.search('\d+\D+\d+_', fnameshort).group()[-5:-1]
 #                    m = re.search('\w+\d+\.',fnameshort)#'\w+\d+\_+\d+\.',fnameshort)
-#                    print(m)
+
                     print(objname, objdate)
                     imname = objname+'_texas.png'
                     self.figlist['target'].append(objname)
@@ -333,103 +333,85 @@ class weblesniffclass:
     
 
 
-    def makewebpage(self,p='1000'):
+    def makewebpage(self, cans,p='1000'):
         colors4tmpl = [self.bgcolor1imtable,'lightcyan']
         # first, get fig files...
         self.getfiglist()
-        cans = ascii.read('candidates.csv')
-#        print(self.date, self.webdir)
+#        cans = ascii.read('candidate')
+
         self.webfilename = '%s/%s.html' % (self.webdir, self.date)
         webpage = webpageclass()
         webpage.loaddefaultpage(self.imagelist_htmltemplate)
 
         webpage.substituteplaceholder('PLACEHOLDER_TITLE_PLACEHOLDER', os.path.basename(self.webdir))
+        ggl_link = 'https://docs.google.com/spreadsheets/d/1x6DS_CmJWfhnbpwEn25DAgH194bzM7GtHkxrBhD05B4/edit?usp=sharing'
+        webpage.substituteplaceholder('PLACEHOLDER_GOOGLESHEET_PLACEHOLDER', addlink2string('List',ggl_link))
         webpage.substituteplaceholder('PLACEHOLDER_BACKTOMAINLINK_PLACEHOLDER', addlink2string('BACK','..'))
         
 
-        infotable = htmltable(2,border=1,cellspacing=0,cellpadding=2,width='1000px',textalign='center',verticalalign='center',fontscale=self.imagetablefontscale,font=self.font,bgcolor=self.bgcolor1imtable)
+        infotable = htmltable(3,border=1,cellspacing=0,cellpadding=2,width='1000px',textalign='center',verticalalign='center',fontscale=self.imagetablefontscale,font=self.font,bgcolor=self.bgcolor1imtable)
         field = os.path.basename(self.webdir)
         imcounter = 0
-#        print(self.figlist['images'])
+
         img_dir = os.getcwd()+'/plots/'
+        header = web_cfg['header']
+        infotable.startrow()
+        for h in header:
+            infotable.addcol(h, typ = 'th')
+        infotable.endrow()
         if len(self.figlist['images'])>0:
             for target in self.figlist['target']:
                 infotable.startrow()
-                infotable.addcol('', bgcolor = 'red')
+#                infotable.addcol('', bgcolor = 'red')
                 tag = target
-                s = addtag2string(target,tag)
-#                print(self.figlist['date'])
+
+
                 webaddress = self.getwebaddress(target,tag=tag)
                 if webaddress != None: s+='<br><font size=5>'+webaddress+'</font>'
-                #s+='<br><font size=5>'
-                #s+=addlink2string('zs9cmd','%d/zs9cmd.txt' % ccd)
-                #s+='   '+addlink2string('zs9cmd.diff','%d/zs9cmd.diff.txt' % ccd)
-                #s+='   '+addlink2string('zs9cmd.diff.bin','%d/zs9cmd.diff.bin.txt' % ccd)
-                #s+='   '+addlink2string('tarcmd','%d/tarcmd.txt' % ccd)
-                #s+='</font>'
-                infotable.addcol(s, color = 'white', bgcolor = 'red', fontsize=20)
-#                infotable.addcol(self.figlist['date'][imcounter], fontsize=10)
-
+                img = self.figlist['images'][imcounter]
                 t_info = cans[cans['Name']==target]
-                try:
-                    infotable.addtable(t_info, t_info.colnames)
-                except:
-                    infotable.addcol('')
 
-                infotable.endrow()
+
+                for h in header[:-2]:
+
+                    try: 
+#                        print(h, target, t_info[h][0])
+                        
+                        if h =='Name':
+                            if web_cfg['link'] == 'YSE':
+                                s = addlink2string(target,'https://ziggy.ucolick.org/yse/transient_detail/'+ target)
+                                s = addtag2string(s,tag)
+                            elif web_cfg['link'] == 'TNS':
+                                s = addlink2string(target, 'https://wis-tns.weizmann.ac.il/object/'+target)
+                                s = addtag2string(s,tag)
+                            else: 
+                                continue
+                            infotable.addcol(s)
+                        else:    
+                            infotable.addcol(str(t_info[h][0]))
+                    except:
+                        infotable.addcol('')
+
+#                infotable.endrow()
                 tmplcounter=0
 #                print('figlist=', self.figlist)
 
-                img = self.figlist['images'][imcounter]
-#                print('img=',img)
-                infotable.startrow()
-                infotable.addcol('')
-#                print(img_dir,target, img)img_dir+target+ '/'+
+
                 texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
 #                print(texas_info_file)
                 try:
                     texas_info_table = ascii.read(texas_info_file)
                 except: 
                     texas_info_table = ascii.read('./texas_table_sample.txt')
-                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']
-                infotable.addtable(texas_info_table, texas_header)
-                infotable.addcol('SN lc info here')
-#                infotable.addcol(details, fontsize=5)
-
-
-                infotable.endrow()
-#                    print('tmplID',tmplID,self.figlist[ccd][tmplID])
-#                for im1 in img:
-
-                infotable.startrow()
-                        
-                tag = 'im%d' % (imcounter+1)
-                s_next = addlink2string('next','#im%d' % (imcounter+2))
-                if imcounter>0:
-                    s_prev = addlink2string('prev','#im%d' % (imcounter))
-                else:
-                    s_prev = ''
-                s_back = addlink2string('back','..')
-                    #s = addtag2string('%s<br>prev' % (s_next),tag)
-                s = '%s<br>%s<br>%s' % (s_next,s_prev,s_back)
-                infotable.addcol(s, verticalalign='top',fontsize=10,bgcolor=colors4tmpl[imcounter % 2])
-#                        if self.usebinnedflag:
-#                            im2 = re.sub('bin\.%s' % self.figsuffix,self.figsuffix,im1)
-#                        else:
-#                            im2 = re.sub(self.figsuffix,'bin\.%s' % self.figsuffix,im1)
-#                        print(im1,im2)
-			
-#                        im2 = re.sub('texas', 'lc',im1)
-#                        print('im1&2 = ', im1, im2)
-
-                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=None,height=500),img_dir+target+ '/'+ img[0])
-#                print(img_dir,target,img[0])
+                    
+                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=300,height=None),img_dir+target+ '/'+ img[0])
                 s = addtag2string(s,tag)
-                infotable.addcol(s)  
-                try:
-                    s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=None,height=500),img_dir+target+ '/'+ img[1])
-                except:
-                    print('no texas for xxx')
+                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']
+                infotable.addtable(texas_info_table, texas_header, s)
+#                infotable.addcol('SN lc info here')
+#                infotable.addcol(details, fontsize=5)
+                
+                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=200,height=None),img_dir+target+ '/'+ img[1])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 infotable.endrow()
@@ -437,7 +419,7 @@ class weblesniffclass:
                 imcounter+=1
 
                     
-        webpage.substituteplaceholder('PLACEHOLDER_IMAGETABLE_PLACEHOLDER', infotable.gettable())
+        webpage.substituteplaceholder('PLACEHOLDER_IMAGETABLE_PLACEHOLDER', infotable.gettable(sortable = True))
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
        
         print('### Saving ',self.webfilename)
@@ -475,6 +457,6 @@ def main(args):
     #weblesniff.verbose = args[4]#.verbose
     #weblesniff.debug = args[5]#.debug
 
-    weblesniff.makewebpage()
+    weblesniff.makewebpage(weblesniff.target_list)
     
     print("weblesniff SUCCESS")

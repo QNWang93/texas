@@ -6,24 +6,29 @@ import datetime
 import weblesniff
 import sys
 import gspread
-from astropy.table import Table
+from astropy.table import Table, Column
 from oauth2client.service_account import ServiceAccountCredentials
-
+from numpy import dtype
+from config import web_cfg
 
 
 def sheet2aptable():
-    scope = ['https://spreadsheets.google.com/feeds',
-             'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
-    client = gspread.authorize(creds)
-    sheet = client.open("texas").sheet1
+
+    sheet=candidate_generator.get_gglsheet()
     s = [sheet.col_values(1)[1:]]
+    header = [sheet.col_values(1)[0]]
+    t = Table(s, names = header, dtype = [web_cfg['dtype'][header[0]]])
+
+   
 
     for i in range(len(sheet.row_values(1))-1):
-        s = s+[sheet.col_values(i+2)[1:]]
+        if sheet.row_values(1)[i+1] in web_cfg['header']:
+            header = sheet.row_values(1)[i+1]
+            t.add_column(Column(sheet.col_values(i+2)[1:]), name = header)
 
-    t = Table(s, names = sheet.row_values(1))
     return t
+    
+
 
 if __name__ == "__main__":
  #   start = sys.argv[1]
@@ -38,13 +43,24 @@ if __name__ == "__main__":
         date = str(today.month) +'0'+ str(today.day)
     else:
         date = str(today.month) + str(today.day)
+    
+    for h in web_cfg['header'][:-2]: 
+        if not (h in cans.colnames): 
+            cans.add_column(Column([web_cfg['default'][h]]*len(cans)), name = h)
+    l = len(cans)
+    k = 1
     for ta in cans:
         try:
+            print('start on '+ta['Name'] + ', '+str(k)+'/'+str(l))
+            k = k+1
             z = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date])
-            if z!= None and z!='null':
-                ta['Redshift'] = z
+            if z!= None and z!='null' and ta['Redshift'] =='None':
+                ta['Redshift'] = str(z)
+                ta['z_source'] = 'GLADE'
+               
         except:
             continue
+    
 
     cans.sort(['Redshift','Type'])
     ascii.write(cans, 'candidates_sort.csv',names=cans.colnames, overwrite=True)
