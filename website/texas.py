@@ -1,11 +1,10 @@
 from __future__ import print_function
-from astropy.table import Table
 import requests
 from PIL import Image
 from io import BytesIO
 import mastcasjobs
 from astropy.io import ascii
-from astropy.table import Table, vstack
+from astropy.table import Table, vstack, Column
 import sys
 import os
 import re
@@ -13,11 +12,11 @@ import pylab
 import json
 import astropy
 import csv
-from astropy.modeling.models import Sersic2D
+from astropy.modeling.models import Sersic2D, Ellipse2D
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
-from astropy.modeling.models import Ellipse2D
+from astropy import coordinates
 from astropy.coordinates import Angle
 import matplotlib.patches as mpatches
 from astropy.io import fits
@@ -28,7 +27,7 @@ import getopt
 from matplotlib.backends.backend_pdf import PdfPages
 from config import texas_cfg
 from astropy.wcs import WCS
-
+from astroquery.ned import Ned
 
 
 try: # Python 3.x
@@ -193,10 +192,46 @@ def sourcesearch_glade(ra, dec, radius):#radius in unit of arcmin
         cosdec=np.cos(low*np.pi/180)
         if abs((source[6]-ra)*cosdec)*60<radius/1.7 and abs((source[7]-dec))*60<radius/1.7:
             nearby_source.add_row(source)
-    
-    
+    source = Column(['GLADE']*len(nearby_source), name='source')
+    nearby_source.add_column(source)
     return nearby_source
 
+def sourcesearch_ned(ra, dec, radius):#radius in unit of arcmin
+    co = coordinates.SkyCoord(ra=ra, dec=dec,unit=(u.deg, u.deg), frame='fk4', equinox = 'J2000.000')
+    result_table = Ned.query_region(co, radius=radius * u.arcmin, equinox='J2000.000')
+    gals = result_table[result_table['Type']==b'G']
+    cans = gals[np.invert(gals['Redshift'].mask)]
+    
+    return cans
+    
+def merge(glade_list, ned_list):
+    z_type_index = ['none', 'SPEC', 'DIST', 'PHOTO']
+    gal_list = Table(names = ['name','ra', 'dec', 'z', 'z_flag', 'source', 'd', 'norm_d'], 
+                     dtype = ['U30', float, float, float, 'U10', 'U10', float, float])
+    for i in glade_list:
+        if i['PGC']!='null':
+            name = 'PGC'+i['PGC']
+        elif i['GWGC']!='null':
+            name = i['GWGC']
+        elif i['HyperLEDA']!='null':
+            name = 'HyperLEDA' + i['HyperLEDA']
+        elif i['2MASS']!='null':
+            name = '2MASS'+i['2MASS']
+        elif i['SDSS-DR12']!='null':
+            name = i['SDSS-DR12']
+        else:
+            name = ''
+            
+        if i['z']=='null':
+            z = np.NaN
+        else:
+            z = i['z']
+        
+        gal_list.add_row([name, i['ra'], i['dec'], z, z_type_index[i['z_flag']], 'GLADE', i['d'], i['norm_d']])
+        
+    for i in ned_list:
+        gal_list.add_row([i['Object Name'], i['RA'], i['DEC'], i['Redshift'], i['Redshift Flag'], 'NED', i['d'], i['norm_d']])
+    return gal_list
 
 def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
 
@@ -417,16 +452,20 @@ def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
     plt.subplot(projection=wcs)
     plt.imshow(bfim, cmap='summer')#, norm=LogNorm())
     ax = plt.gca()
-    
+    ax.set_xlim(0,240*search_size)
+    ax.set_ylim(0,240*search_size)
     k = 1
+    last = gal_list[0]
     if catalogue == 'glade':
         for j in gal_list:
-            x, y = ((ra-j[6])*4*3600*np.cos(j[7]/180*np.pi)+(size/2)), (j[7]-dec)*4*3600+(size/2)
-            ax.plot(x,y, 'bx', label = 'glade source')
+            if k==1 or ((abs(j['ra']-last['ra'])*np.cos(j['dec']/180*np.pi)>0.005 or abs(j['dec']-last['dec'])>0.005)):
+                x, y = ((ra-j['ra'])*4*3600*np.cos(j['dec']/180*np.pi)+(size/2)), (j['dec']-dec)*4*3600+(size/2)
+                ax.plot(x,y, 'bx', label = 'glade source')
 #            print(j[10])
-            z = int(float(j[10])*100000)/100000.
-            ax.annotate(str(k) + ': z='+str(z), xy=(x+20, y-5), fontsize=15, ha="center", color='b')
+                z = int(float(j['z'])*10000)/10000.
+                ax.annotate(str(k) + ': z='+str(z), xy=(x+20, y-5), fontsize=15, ha="center", color='b')
             k = k+1
+            last = j
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')
 
@@ -445,38 +484,18 @@ def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
     plt.savefig(filename)
 
 def main(argv):
-#    try:                          
-#        opts, args = getopt.getopt(argv, "hi:c:n:p:d", ["help", "catalogue", "PS_WSID", "PS_password"])      
-#    except getopt.GetoptError:
-#        usage()
-#        sys.exit(2)
 
     catalogue=texas_cfg['catalogue']
     do_im = texas_cfg['do_im']
     os.environ['CASJOBS_WSID'] = texas_cfg['casjob_id']
     os.environ['CASJOBS_PW'] = texas_cfg['casjob_pw']
 
-#    for opt, arg in opts:                
-#        if opt in ("-h", "--help"):       
-#            usage()                     
-#            sys.exit()                  
-#        elif opt == '-d':                
-#            global _debug               
-#            _debug = 1                  
-#        elif opt in ("-c", "--catalogue="): 
-#            catalogue = arg               
- #       elif opt in ('-n', 'PS_WSID'):                
- #           os.environ['CASJOBS_WSID'] = arg
- #       elif opt in ('-p', 'PS_password'):                
- #           os.environ['CASJOBS_PW'] = arg
- #       elif opt in ('-i', 'do_im'):                
- #           do_im = arg
     ra = float(argv[0])
     dec = float(argv[1])
     search_size = int(argv[2])
     if do_im:
-        filename = argv[3]
-#    print(argv)
+        filename = argv[3] + '.'+texas_cfg['img_suffix']
+
     size = 240*search_size  #PS cutout image size, 240*sidelength in arcmin
     galac_search_size = texas_cfg['point_search_rad']
 
@@ -486,20 +505,25 @@ def main(argv):
 
 
     if catalogue == 'glade':
+    
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
         if len(gal_list)>0:
             gal_list['norm_d'] = 99999.
             gal_list['d'] = 99999.
+            
+        ned_list = sourcesearch_ned(ra,dec, size/240)
+        if len(gal_list)>0:
+            ned_list['norm_d'] = 99999.
+            ned_list['d'] = 99999.
+            
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
     else:
         print('no this catalogue')
-	#check corrsponding block of sources
-	#plot sources onto image
+
 
 
     ser_list = search_ser(ra, dec, search_size)
-    #print(ser_list)
     i=0
     if len(ser_list)>0:
         ser_list = ser_rearrange(ser_list, ra, dec)
@@ -510,9 +534,9 @@ def main(argv):
 
 
     gal_can = []
-    #print(gal_list)
 
-    z_type_index = ['none', 'spec_z', 'dist_z', 'photo_z']
+
+    z_type_index = ['none', 'SPEC', 'DIST', 'PHOTO']
    
     if catalogue == 'glade':
         for j in gal_list:
@@ -522,6 +546,17 @@ def main(argv):
                     s['z_type'] = z_type_index[int(j[20])]
                     s['ra_glade'] = j[6]
                     s['dec_glade'] = j[7]
+                    j['norm_d'] = s['norm_dist']
+                    j['d'] = s['dist']
+                    gal_can.append(s)
+        for j in ned_list:
+            for s in ser_list:
+                if abs((j['RA']-s['raMean'])*np.cos(s['decMean']))<0.001 and abs(j['DEC']-s['decMean'])<0.001:
+                    if s['z'] ==-999.:
+                        s['z'] = j['Redshift']
+                    s['z_type'] = j['Redshift Flag']
+                    s['ra_glade'] = j['RA']
+                    s['dec_glade'] = j['DEC']
                     j['norm_d'] = s['norm_dist']
                     j['d'] = s['dist']
                     gal_can.append(s)
@@ -541,19 +576,18 @@ def main(argv):
 
 
     s_list = search_s(ra, dec, galac_search_size)
+    
+    gal_list = merge(gal_list, ned_list)
+    
     gal_list = rearrange(gal_list, 'norm_d')
     if do_im:
         plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
 
     plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
-	#ax.legend()
-	    
-	#plt.show()
-#    fig.text(.5, .05, txt, ha='center',wrap=True)
-#    fig.text(-0.5, .05, '432423424214121342', ha='center',wrap=True)
 
+    print(gal_list)
     return(gal_list)
-	#append necessary information onto plot, modified distance, redshift etc9
+
 
 
 if __name__ == "__main__":

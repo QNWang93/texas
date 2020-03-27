@@ -44,7 +44,7 @@ if __name__ == "__main__":
     else:
         date = str(today.month) + str(today.day)
     
-    for h in web_cfg['header'][:-2]: 
+    for h in web_cfg['header'][:-3]: 
         if not (h in cans.colnames): 
             cans.add_column(Column([web_cfg['default'][h]]*len(cans)), name = h)
     l = len(cans)
@@ -53,10 +53,10 @@ if __name__ == "__main__":
         try:
             print('start on '+ta['Name'] + ', '+str(k)+'/'+str(l))
             k = k+1
-            z = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date])
+            z, source = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date])
             if z!= None and z!='null' and ta['Redshift'] =='None':
                 ta['Redshift'] = str(z)
-                ta['z_source'] = 'GLADE'
+                ta['z_source'] = source
                
         except:
             continue
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     cans.sort(['Redshift','Type'])
     ascii.write(cans, 'candidates_sort.csv',names=cans.colnames, overwrite=True)
 
-    weblesniff.main(['./', date, 'imagelist_template.html', 'png', cans])
+    weblesniff.main(['./', date, 'imagelist_template.html', web_cfg['img_suffix'], cans])
 
     
     

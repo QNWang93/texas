@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 '''
-create png files for images
+create jpg files for images
 A. Rest
 '''
 import argparse
 import glob
-import sys, os, re, types, shutil,copy,random,time
+import sys, os, re, types, shutil,copy,random,time, math
 import astropy
 import astropy.io.fits as fits
 from astropy.io import ascii
@@ -50,9 +50,13 @@ def tab2htmltab(table, header, othercontent):
     line +='</tr>\n'
     for j in np.arange(len(table)):
         line += '<tr>'
+#        print(table[j])
         for i in header:
             if isinstance(table[j][i], float):
-                line += '<td>'+str(save_digit(table[j][i], num_digit=5)) + '</td> ' 
+                if math.isnan(table[j][i]):
+                    line += '<td>NaN</td> '
+                else:
+                    line += '<td>'+str(save_digit(table[j][i], num_digit=5)) + '</td> ' 
             else:
                 line += '<td>'+str(table[j][i]) + '</td> '
          
@@ -301,7 +305,7 @@ class weblesniffclass:
         imgdir = './plots/*/'
         if len(self.target_list) ==0:
             flist = glob.glob('%s/%s' % (imgdir,figpattern))
-
+            print(flist)
             if len(flist)>0:
                 i=0
                 for fname in flist:
@@ -312,19 +316,17 @@ class weblesniffclass:
 #                    m = re.search('\w+\d+\.',fnameshort)#'\w+\d+\_+\d+\.',fnameshort)
 
                     print(objname, objdate)
-                    imname = objname+'_texas.png'
+                    imname = objname+'_texas.'+self.figsuffix
                     self.figlist['target'].append(objname)
-                    self.figlist['images'].append([imname, objname+objdate+'_lc.png'])
-
-#                self.figlist['lc']=.append([fnameshort, objname+objdate+'_lc.png'])
+                    self.figlist['images'].append([imname, objname+objdate+'_lc.'+self.figsuffix])
                     self.figlist['date'].append(objdate)
                     i=i+1
         else: 
             for target in self.target_list:
                 self.figlist['target'].append(target['Name'])
                 self.figlist['date'].append(self.date)
-                imname = target['Name'] + '_texas.png'
-                self.figlist['images'].append([imname, target['Name']+self.date+'_lc.png'])
+                imname = target['Name'] + '_texas.'+self.figsuffix
+                self.figlist['images'].append([imname, target['Name']+self.date+'_lc.'+self.figsuffix])
 
     def getwebaddress(self,field,tag=None):
         if self.rootwebaddress == None: return None
@@ -372,7 +374,7 @@ class weblesniffclass:
                 t_info = cans[cans['Name']==target]
 
 
-                for h in header[:-2]:
+                for h in header[:-3]:
 
                     try: 
 #                        print(h, target, t_info[h][0])
@@ -396,7 +398,10 @@ class weblesniffclass:
                 tmplcounter=0
 #                print('figlist=', self.figlist)
 
-
+                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=200,height=None),img_dir+target+ '/'+ img[1])
+                s = addtag2string(s,tag)
+                infotable.addcol(s)  
+                
                 texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
 #                print(texas_info_file)
                 try:
@@ -406,14 +411,13 @@ class weblesniffclass:
                     
                 s = addlink2string(imagestring4web(img_dir+target+ '/'+img[0],width=300,height=None),img_dir+target+ '/'+ img[0])
                 s = addtag2string(s,tag)
-                texas_header = ['Gal_flag', 'ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']
-                infotable.addtable(texas_info_table, texas_header, s)
+                infotable.addcol(s)  
+                texas_header = ['ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']#, 'source']
+                infotable.addtable(texas_info_table, texas_header, '')
 #                infotable.addcol('SN lc info here')
 #                infotable.addcol(details, fontsize=5)
                 
-                s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=200,height=None),img_dir+target+ '/'+ img[1])
-                s = addtag2string(s,tag)
-                infotable.addcol(s)  
+
                 infotable.endrow()
                 tmplcounter+=1
                 imcounter+=1
