@@ -512,7 +512,7 @@ def main(argv):
             gal_list['d'] = 99999.
             
         ned_list = sourcesearch_ned(ra,dec, size/240)
-        if len(gal_list)>0:
+        if len(ned_list)>0:
             ned_list['norm_d'] = 99999.
             ned_list['d'] = 99999.
             
