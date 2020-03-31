@@ -57,13 +57,14 @@ if __name__ == "__main__":
             disc_date = Time(ta["Disc date"], format = 'iso', scale = 'utc')
             print('start on '+ta['Name'] + ', '+str(k)+'/'+str(l))
             k+=1
-            ta['TESS_coverage'] = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date, disc_date.mjd])
+            name = ta['Name']
+            ta['TESS_coverage'] = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date, disc_date.jd])
             hosts = ascii.read(lc_cfg['home_dir']+name+'/'+ name + '_texas.txt')
             z = hosts['z'][0]
             source = hosts['source'][0]
             if z!= None and z!='null' and ta['Redshift'] =='None':
                 ta['Redshift'] = str(z)
-                ta['z_source'] = source
+#                ta['z_source'] = source
         except:
             continue
     

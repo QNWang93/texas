@@ -264,10 +264,17 @@ def main(argv):
     if len(argv)>4: 
         disc_t = argv[4]
     else:
-        disc_t = Time.now().mjd
-  #  if not os.path.exists(out_fig):
-    tess_cover = lc(ra, dec, out_fig, atlas_data_file, disc_t)
-    atlas2yse(name, ra, dec, atlas_data_file)
+        disc_t = Time.now().jd
+        
+    if not os.path.exists(out_fig):
+        tess_cover = lc(ra, dec, out_fig, atlas_data_file, disc_t)
+        atlas2yse(name, ra, dec, atlas_data_file)
+    else:    
+        tess_ob = tess_obs(ra, dec)
+        tess_cover = False
+        for [t1, t2] in tess_ob:
+            if disc_t>t1 and disc_t<t2:
+                tess_cover = True
 
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:

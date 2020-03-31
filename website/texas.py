@@ -252,7 +252,7 @@ def merge(glade_list, ned_list):
 def sep(ra1, dec1, ra2, dec2):
     c1 = SkyCoord(ra1*u.degree, dec1*u.degree, frame='fk5')
     c2 = SkyCoord(ra2*u.degree, dec2*u.degree, frame='fk5')
-    d = c1.separation(c2).arcmin
+    d = c1.separation(c2).arcsec
     return d
 
 
@@ -270,9 +270,9 @@ def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
     r=a1*b1*np.sqrt((1+np.tan(theta/180*np.pi)*np.tan(theta/180*np.pi))/(b1*b1+a1*a1*np.tan(theta/180*np.pi)*np.tan(theta/180*np.pi)))
 
 
-    nor_d = d*3600/r
+    nor_d = d/r
 
-    return d*3600., nor_d
+    return d, nor_d
 
 def rearrange(s_list, column_name):
     for i in np.arange(len(s_list)):
@@ -307,9 +307,10 @@ def ser_rearrange(s_list, ra, dec):
         
     s_list = rearrange(s_list, 'norm_dist')
     index = (s_list['norm_dist']<texas_cfg['norm_d_limit'])
+
     f_list = s_list[index]
-    
-    return s_list
+#    print(s_list, f_list)
+    return f_list
 
 def plot_ellipse(s_list, ra, dec, size, color, ax):
     i=0
@@ -486,7 +487,8 @@ def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
         ax.plot(x,y, 'rx', label = 'PS point source')
 	    
 #    print(ser_list)
-    plot_ellipse(ser_list, ra, dec, size, 'm', ax)
+    if len(ser_list)>0:
+        plot_ellipse(ser_list, ra, dec, size, 'm', ax)
 
     ax.plot([size/2+10, size/2+20], [size/2, size/2], 'k')
     ax.plot([size/2, size/2], [size/2+10, size/2+20], 'k')
@@ -530,7 +532,8 @@ def main(argv):
     ser_list = search_ser(ra, dec, search_size)
     i=0
     if len(ser_list)>0:
-        ser_list = ser_rearrange(ser_list, ra, dec)
+        ser_list = ser_rearrange(ser_list, ra, dec)#reorder by norm_d and remove far away ones
+    if len(ser_list)>0:
         ser_list['z']=-999.
         ser_list['z_type'] = 'none'
         ser_list['ra_glade'] = -999.
@@ -590,7 +593,7 @@ def main(argv):
         s_list = search_s(ra, dec, galac_search_size)
     
         gal_list = merge(gal_list, ned_list)
-    
+        gal_list = rearrange(gal_list, 'd')
         gal_list = rearrange(gal_list, 'norm_d')
         if do_im:
             plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
