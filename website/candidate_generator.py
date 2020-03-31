@@ -6,12 +6,22 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import time
 import pygsheets
-
 from astropy.time import Time 
-
 import warnings
+from config import lc_cfg
+import texas
+import os
 warnings.filterwarnings("ignore")
 
+def Save_space(Save):
+    """
+    Creates a pathm if it doesn't already exist.
+    """
+    try:
+        if not os.path.exists(Save):
+            os.makedirs(Save)
+    except FileExistsError:
+        pass
 
 def get_gglsheet():
 # use creds to create a client to interact with the Google Drive API
@@ -22,37 +32,32 @@ def get_gglsheet():
     sheet = client.open("texas").sheet1
     return sheet
 
-def Rise_covered(Table):
-	"""
-	Check to see if the rise of the transient is covered by TESS observations.
+def TESS_cover(ra, dec, disc):
+	before_leeway = 10	 # Days of leeway before date
+	after_leeway = 10	 # Days of leeway after date
+	tess_date = lc_cfg['tess_date']
 
-	Input:
-	------
-	Table - pandas dataframe 
+	url = 'https://heasarc.gsfc.nasa.gov/cgi-bin/tess/webtess/'
+	url += 'wtv.py?Entry={ra}%2C{dec}'
+	r = requests.get(url.format(ra=str(ra), dec=str(dec)))
+	if r.status_code!=200:
+		print('status message:',r.text)
+		error = 'ERROR: could not get {url}, status code {code}'
+		raise RuntimeError(error.format(url=url, code=r.status_code))
+		return(None)
 
-	Outputs:
-	--------
-	ind 	- list, indicies that TESS covers
-	sector 	- list, TESS sectors of the transients
-	"""
-	TESS_times = pd.read_csv('TESS_sector_jd.csv').values
-	ind = []
-	sector = []
-	for i in range(len(Table)):
-		maxtime = Time(Table['min_date'].iloc[i].replace(' ', 'T')).jd
-		disc = Time(Table['disc_date'].iloc[i].replace(' ', 'T')).jd
-		
-		diff = maxtime - disc 
-		if diff > 5:
-			buffer = 20 # assuming max and rise is ~18 days
-		else:
-			buffer = 10 # arbitrary choice
-		sneeze = ((TESS_times[:,1] < (maxtime - buffer)) & 
-						  (TESS_times[:,2] > (maxtime - 3)))
-		if sneeze.any():
-			sector += [TESS_times[sneeze,0][0]]
-			ind += [i]
-	return ind, sector #Table[ind] 
+	reg = r"observed in camera \w+.\nSector \w+"
+	info = re.findall(reg, r.content.decode())
+	sectors=[]
+	for k in info:
+	    sectors.append(int(re.split(r'\s', k)[5])-1)
+
+	if len(sectors)>0:
+		for sector in sectors:
+			if (discovery_jd > tess_date[int(sector)-1]-before_leeway and
+				discovery_jd < tess_date[int(sector)]+after_leeway):
+				return(True)
+	return(False)
 
 
 def Check_gal_lat(Table):
@@ -170,19 +175,25 @@ def Update_sheet():
 	for i in range(len(df['Name'])):
 		name = df['Name'][i]
 		row = [df[col][i] for col in df.columns]
+		home_dir = lc_cfg['home_dir']+name+'/'
+		Save_space(home_dir)
 		if (web['Name'] == name).any():
 			ind = int(np.where(web['Name'] == name)[0][0])+2
-
 		else:
-			while True:
-				try:
-					sheet.insert_row(row, 2)
-				except:
-					time.sleep(100)
-					print('next round')
-					continue
-				break
-			print('Added ', name)
+			try:
+				print('start TEXAS on '+name)
+				host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
+				while host_exist:
+					try:
+						sheet.insert_row(row, 2)
+					except:
+						time.sleep(100)
+						print('next round')
+						continue
+					print('Added ', name)
+					break
+			except:
+				print('unable to access PanSTARRS')
 	print('Updated')
 	return 
 

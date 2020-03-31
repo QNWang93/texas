@@ -50,7 +50,6 @@ def tab2htmltab(table, header, othercontent):
     line +='</tr>\n'
     for j in np.arange(len(table)):
         line += '<tr>'
-#        print(table[j])
         for i in header:
             if isinstance(table[j][i], float):
                 if math.isnan(table[j][i]):
@@ -299,9 +298,7 @@ class weblesniffclass:
         self.figlist = {}
         self.figlist['target']=[]
         self.figlist['images']=[]
-#        self.figlist['lc']=[]
         self.figlist['date']=[]
-#        imgdir = '%s/%s' % (self.webdir,'plots/*/')
         imgdir = './plots/*/'
         if len(self.target_list) ==0:
             flist = glob.glob('%s/%s' % (imgdir,figpattern))
@@ -337,9 +334,7 @@ class weblesniffclass:
 
     def makewebpage(self, cans,p='1000'):
         colors4tmpl = [self.bgcolor1imtable,'lightcyan']
-        # first, get fig files...
         self.getfiglist()
-#        cans = ascii.read('candidate')
 
         self.webfilename = '%s/%s.html' % (self.webdir, self.date)
         webpage = webpageclass()
@@ -350,7 +345,6 @@ class weblesniffclass:
         webpage.substituteplaceholder('PLACEHOLDER_GOOGLESHEET_PLACEHOLDER', addlink2string('List',ggl_link))
         webpage.substituteplaceholder('PLACEHOLDER_BACKTOMAINLINK_PLACEHOLDER', addlink2string('BACK','..'))
         
-
         infotable = htmltable(3,border=1,cellspacing=0,cellpadding=2,width='1000px',textalign='center',verticalalign='center',fontscale=self.imagetablefontscale,font=self.font,bgcolor=self.bgcolor1imtable)
         field = os.path.basename(self.webdir)
         imcounter = 0
@@ -364,21 +358,15 @@ class weblesniffclass:
         if len(self.figlist['images'])>0:
             for target in self.figlist['target']:
                 infotable.startrow()
-#                infotable.addcol('', bgcolor = 'red')
                 tag = target
-
 
                 webaddress = self.getwebaddress(target,tag=tag)
                 if webaddress != None: s+='<br><font size=5>'+webaddress+'</font>'
                 img = self.figlist['images'][imcounter]
                 t_info = cans[cans['Name']==target]
 
-
                 for h in header[:-3]:
-
                     try: 
-#                        print(h, target, t_info[h][0])
-                        
                         if h =='Name':
                             if web_cfg['link'] == 'YSE':
                                 s = addlink2string(target,'https://ziggy.ucolick.org/yse/transient_detail/'+ target)
@@ -394,16 +382,14 @@ class weblesniffclass:
                     except:
                         infotable.addcol('')
 
-#                infotable.endrow()
                 tmplcounter=0
-#                print('figlist=', self.figlist)
 
                 s = addlink2string(imagestring4web(img_dir+target+ '/'+img[1],width=200,height=None),img_dir+target+ '/'+ img[1])
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 
                 texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
-#                print(texas_info_file)
+
                 try:
                     texas_info_table = ascii.read(texas_info_file)
                 except: 
@@ -414,14 +400,10 @@ class weblesniffclass:
                 infotable.addcol(s)  
                 texas_header = ['ra', 'dec', 'z', 'z_flag', 'norm_d', 'd']#, 'source']
                 infotable.addtable(texas_info_table, texas_header, '')
-#                infotable.addcol('SN lc info here')
-#                infotable.addcol(details, fontsize=5)
                 
-
                 infotable.endrow()
                 tmplcounter+=1
                 imcounter+=1
-
                     
         webpage.substituteplaceholder('PLACEHOLDER_IMAGETABLE_PLACEHOLDER', infotable.gettable(sortable = True))
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
@@ -431,35 +413,20 @@ class weblesniffclass:
 
         del webpage
 
-            
-#if __name__ == '__main__':
 
-#    info =lc_ex.main(351.8348167,41.5839778, '2019uag', '0000') 
-#    print(info)
 def main(args):    
     weblesniff = weblesniffclass()
-    #parser = weblesniff.define_options()
-    #args = parser.parse_args()
-
 
     weblesniff.webdir = args[0]#.webdir
     weblesniff.date = str(args[1])#.date)
     weblesniff.imagelist_htmltemplate = args[2]#.imagelist_htmltemplate
-#    print(weblesniff.date, args.date)
-    #if type(args[4]) == int:
-    #    if args[4]>=1:
-    #        print("webdir:    {}".format(weblesniff.webdir))
 
     if args[3] != None:
         weblesniff.figsuffix = args[3]#.figsuffix
     if len(args)>4:
         weblesniff.target_list = args[4]#.figsuffix
-    #weblesniff.usebinnedflag = args.usebinned
+
     weblesniff.rootwebaddress = None#args.rootwebaddress
-        
-    # set verbose, debug, and onlyshow level
-    #weblesniff.verbose = args[4]#.verbose
-    #weblesniff.debug = args[5]#.debug
 
     weblesniff.makewebpage(weblesniff.target_list)
     

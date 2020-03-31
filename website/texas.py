@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
 from astropy import coordinates
-from astropy.coordinates import Angle
+from astropy.coordinates import Angle, SkyCoord
 import matplotlib.patches as mpatches
 from astropy.io import fits
 from matplotlib.colors import LogNorm
@@ -28,6 +28,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from config import texas_cfg
 from astropy.wcs import WCS
 from astroquery.ned import Ned
+
 
 
 try: # Python 3.x
@@ -151,6 +152,13 @@ def getgrayim(ra, dec, size=240, output_size=None, filter="g", format="jpg"):
     r = requests.get(url[0])
     im = Image.open(BytesIO(r.content))
     return im
+    
+   
+
+  #=============================================================================  
+    
+    
+    
 
 def sourcesearch_texas(ra, dec, radius):#radius in unit of arcmin
     up = int(np.ceil(dec+0.5))
@@ -184,13 +192,16 @@ def sourcesearch_glade(ra, dec, radius):#radius in unit of arcmin
         print("problematic")
     
     source_table=vstack([s1,s2])
-
-    nearby_source=Table(s1[1:2])
+    source_table['d'] = 0.
+    source_table['norm_d'] = 999.
+    nearby_source=Table(source_table[1:2])
     nearby_source.remove_row(0)
     
     for source in source_table:
         cosdec=np.cos(low*np.pi/180)
-        if abs((source[6]-ra)*cosdec)*60<radius/1.7 and abs((source[7]-dec))*60<radius/1.7:
+        if abs((source[6]-ra)*cosdec)*60<radius/1.7 and abs((source[7]-dec))*60<radius/1.7 and isinstance(source['z'], float):
+            d = sep(ra, dec, source['ra'], source['dec'])
+            source['d'] = d
             nearby_source.add_row(source)
     source = Column(['GLADE']*len(nearby_source), name='source')
     nearby_source.add_column(source)
@@ -201,7 +212,12 @@ def sourcesearch_ned(ra, dec, radius):#radius in unit of arcmin
     result_table = Ned.query_region(co, radius=radius * u.arcmin, equinox='J2000.000')
     gals = result_table[result_table['Type']==b'G']
     cans = gals[np.invert(gals['Redshift'].mask)]
-    
+    if len(cans)>0:
+        cans['d'] = 0.
+        cans['norm_d'] = 999.
+        for source in cans:
+            d = sep(ra, dec, source['RA'], source['DEC'])
+            source['d'] = d
     return cans
     
 def merge(glade_list, ned_list):
@@ -233,9 +249,15 @@ def merge(glade_list, ned_list):
         gal_list.add_row([i['Object Name'], i['RA'], i['DEC'], i['Redshift'], i['Redshift Flag'], 'NED', i['d'], i['norm_d']])
     return gal_list
 
-def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
+def sep(ra1, dec1, ra2, dec2):
+    c1 = SkyCoord(ra1*u.degree, dec1*u.degree, frame='fk5')
+    c2 = SkyCoord(ra2*u.degree, dec2*u.degree, frame='fk5')
+    d = c1.separation(c2).arcmin
+    return d
 
-    d = np.sqrt((dec-decMean)**2 + (ra-raMean)**2*np.cos(dec/180*np.pi)**2)
+
+def nor_sep(ra, dec, raMean, decMean, a1, b1, theta1):
+    d = sep(ra, dec, raMean, decMean)
     theta2=np.arctan((dec-decMean)/(ra-raMean))*180./np.pi
     if raMean>ra:
         theta=theta1+theta2
@@ -267,8 +289,8 @@ def ser_rearrange(s_list, ra, dec):
     if len(s_list) == 0:
         return None
 
-    s_list['norm_dist'] = 999999.
-    s_list['dist'] = 999999.
+    s_list['norm_dist'] = 999.
+    s_list['dist'] = 999.
     for s in s_list :
         n_radius=texas_cfg['n_radius']
         theta1 = s['gSerPhi']#rot angle
@@ -284,6 +306,8 @@ def ser_rearrange(s_list, ra, dec):
         s['dist'] = d
         
     s_list = rearrange(s_list, 'norm_dist')
+    index = (s_list['norm_dist']<texas_cfg['norm_d_limit'])
+    f_list = s_list[index]
     
     return s_list
 
@@ -305,23 +329,10 @@ def plot_ellipse(s_list, ra, dec, size, color, ax):
         e1 = mpatches.Ellipse((x0, y0), 2*4*n_radius*a1, 2*4*n_radius*b1, theta1, edgecolor=color,
                               facecolor='none',  label='source 1')    # 4pix/arcsec * n_radius*a, 4pix/arcsec * n_radius*a*b/a 
         if 'z' in s_list.colnames:
-#            if x0<0 or x0>size or y0<0 or y0>size:
-#                print('missing galaxy'+str(i))
-#                continue
-#            ax.annotate('z='+str(int(s['z']*100000)/100000.0), xy=(x0+10, y0+35), fontsize=15, ha="center", color='purple')
-#            print('redshift of texas host'+str(i)+':   '+str(int(s['z']*1000)/1000.0))
-#        else:
             if x0<0 or x0>size or y0<0 or y0>size or s[filter+'SerRadius']<0 or s[filter+'SerChisq']>100:
                 continue
 
-        
         ax.add_patch(e1)
-
-#    for j in range(len(s_list)):
-#        s=s_list[j]
-#        x0, y0 = ((ra-s['raMean'])*4*3600*np.cos(s['decMean']/180*np.pi)+(size/2)), (s['decMean']-dec)*4*3600+(size/2)
-#        ax.annotate(str(j+1), xy=(x0+20, y0+20), fontsize=15, ha="center", color=color)
-    
 
 
 def mastQuery(request):
@@ -455,7 +466,8 @@ def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
     ax.set_xlim(0,240*search_size)
     ax.set_ylim(0,240*search_size)
     k = 1
-    last = gal_list[0]
+    if len(gal_list)>0:
+        last = gal_list[0]
     if catalogue == 'glade':
         for j in gal_list:
             if k==1 or ((abs(j['ra']-last['ra'])*np.cos(j['dec']/180*np.pi)>0.005 or abs(j['dec']-last['dec'])>0.005)):
@@ -483,6 +495,7 @@ def plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename):
 
     plt.savefig(filename)
 
+
 def main(argv):
 
     catalogue=texas_cfg['catalogue']
@@ -493,8 +506,8 @@ def main(argv):
     ra = float(argv[0])
     dec = float(argv[1])
     search_size = int(argv[2])
-    if do_im:
-        filename = argv[3] + '.'+texas_cfg['img_suffix']
+
+    filename = argv[3] + '.'+texas_cfg['img_suffix']
 
     size = 240*search_size  #PS cutout image size, 240*sidelength in arcmin
     galac_search_size = texas_cfg['point_search_rad']
@@ -505,17 +518,8 @@ def main(argv):
 
 
     if catalogue == 'glade':
-    
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
-        if len(gal_list)>0:
-            gal_list['norm_d'] = 99999.
-            gal_list['d'] = 99999.
-            
         ned_list = sourcesearch_ned(ra,dec, size/240)
-        if len(ned_list)>0:
-            ned_list['norm_d'] = 99999.
-            ned_list['d'] = 99999.
-            
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
     else:
@@ -539,7 +543,10 @@ def main(argv):
     z_type_index = ['none', 'SPEC', 'DIST', 'PHOTO']
    
     if catalogue == 'glade':
+        gal_exist = False
         for j in gal_list:
+            if j['d']<texas_cfg['d_limit'] and float(j[10])<texas_cfg['z_limit']:
+                gal_exist = True
             for s in ser_list:
                 if abs((j[6]-s['raMean'])*np.cos(s['decMean']))<0.001 and abs(j[7]-s['decMean'])<0.001 and j[10] != 'null':
                     s['z'] = j[10]
@@ -547,9 +554,12 @@ def main(argv):
                     s['ra_glade'] = j[6]
                     s['dec_glade'] = j[7]
                     j['norm_d'] = s['norm_dist']
-                    j['d'] = s['dist']
-                    gal_can.append(s)
+                    if float(j[10])<texas_cfg['z_limit']:
+                        gal_exist = True
+  #                  gal_can.append(s)
         for j in ned_list:
+            if j['d']<texas_cfg['d_limit'] and j['Redshift']<texas_cfg['z_limit']:
+                gal_exist = True
             for s in ser_list:
                 if abs((j['RA']-s['raMean'])*np.cos(s['decMean']))<0.001 and abs(j['DEC']-s['decMean'])<0.001:
                     if s['z'] ==-999.:
@@ -558,36 +568,39 @@ def main(argv):
                     s['ra_glade'] = j['RA']
                     s['dec_glade'] = j['DEC']
                     j['norm_d'] = s['norm_dist']
-                    j['d'] = s['dist']
-                    gal_can.append(s)
+                    if j['Redshift']<texas_cfg['z_limit']:
+                        gal_exist = True
+ #                   gal_can.append(s)
     elif catalogue == 'texas':
         plot_ellipse(gal_list, ra, dec, size, 'k', ax)#, label = 'texas source')
     
-    txt = ""
-    for i in np.arange(len(ser_list)):
-        j=0
-        s = ser_list[i]
-        if s['z']<0:
-            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
-            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
-        else:
-            txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z'])+ ' , z_type = '+s['z_type'])
-            print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']) + ' , z_type = '+s['z_type'])
+    if gal_exist:
+        txt = ""
+        for i in np.arange(len(ser_list)):
+            j=0
+            s = ser_list[i]
+            if s['z']<0:
+                txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
+                print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0))
+            else:
+                txt=txt+('"/n" normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z'])+ ' , z_type = '+s['z_type'])
+                print('normalized distance to host'+str(i+1)+':   '+str(int(s['norm_dist']*1000)/1000.0)+' , z='+str(s['z']) + ' , z_type = '+s['z_type'])
 
 
-    s_list = search_s(ra, dec, galac_search_size)
+        s_list = search_s(ra, dec, galac_search_size)
     
-    gal_list = merge(gal_list, ned_list)
+        gal_list = merge(gal_list, ned_list)
     
-    gal_list = rearrange(gal_list, 'norm_d')
-    if do_im:
-        plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
+        gal_list = rearrange(gal_list, 'norm_d')
+        if do_im:
+            plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
 
-    plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
+        plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
 
-    print(gal_list)
-    return(gal_list)
-
+        ascii.write(gal_list, argv[3]+'.txt', overwrite=True)
+        return True
+    else:
+        return False
 
 
 if __name__ == "__main__":

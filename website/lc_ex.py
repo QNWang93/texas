@@ -16,6 +16,7 @@ import requests, re
 import texas
 from astropy.io import ascii
 from config import lc_cfg
+from astropy.time import Time
 
 def tess_obs(ra, dec):
 
@@ -143,17 +144,9 @@ def plot_atflux(ax, lc, survey):
     #ax.grid(True)
     return ax
 
-def Save_space(Save):
-    """
-    Creates a pathm if it doesn't already exist.
-    """
-    try:
-        if not os.path.exists(Save):
-            os.makedirs(Save)
-    except FileExistsError:
-        pass
+
         
-def lc(ra, dec, out_fig, atlas_data_file):
+def lc(ra, dec, out_fig, atlas_data_file, disc_t):
     ztf_obj = get_ztf(ra, dec)
 
     lc = ztf2lc(ztf_obj)
@@ -162,6 +155,8 @@ def lc(ra, dec, out_fig, atlas_data_file):
 
     try:
         atlas_lc = search_atlas(ra, dec)
+        mask = (abs(atlas_lc['mag'])>10)
+        atlas_lc = atlas_lc[mask]
         if len(atlas_lc)>0:
             ascii.write(atlas_lc, atlas_data_file, overwrite=True)
             ax1 = plot(ax1,atlas_lc, 'atlas')
@@ -171,9 +166,12 @@ def lc(ra, dec, out_fig, atlas_data_file):
             ax2.set_ylim(-0.1*max(atlas_lc['flux']), 1.2*max(atlas_lc['flux']))
             if len(lc)>0: 
                 ax1 = plot(ax1,lc, 'ztf')
-                ax1.set_ylim(min(max([max(abs(lc['mag'])), max(abs(atlas_lc['mag']))])+0.5, 21), min([min(abs(lc['mag'])), min(abs(atlas_lc['mag']))]) -0.5)
+                ymin = min(max([max(abs(lc['mag'])), max(abs(atlas_lc['mag']))])+0.5, 21)
+                ax1.set_ylim(ymin, min([min(abs(lc['mag'])), min(abs(atlas_lc['mag']))]) -0.5)
             else:
-                ax1.set_ylim(min(max(abs(atlas_lc['mag']))+0.5,21), min(abs(atlas_lc['mag']))-0.5)
+                ymin = min(max(abs(atlas_lc['mag']))+0.5,21)
+                ax1.set_ylim(ymin, min(abs(atlas_lc['mag']))-0.5)
+            ax1.plot(disc_t, ymin, marker = "^")
     except:
         print('unable to get atlas lc')
         if len(lc)>0:
@@ -181,12 +179,14 @@ def lc(ra, dec, out_fig, atlas_data_file):
             ax1.set_ylim(min(max(abs(lc['mag']))+0.5, 21), min(abs(lc['mag']))-0.5)
     
     tess_ob = tess_obs(ra, dec)
+    tess_cover = False
     
     for [t1, t2] in tess_ob:
         x= np.arange(t1-2400000, t2-2400000, 0.1)
         ax1.fill_between(x, 10, 24, facecolor='grey', alpha=0.5, label = 'TESS')
         ax2.fill_between(x, -0.1*max(atlas_lc['flux']), 10000, facecolor='grey', alpha=0.5, label = 'TESS')
-
+        if disc_t>t1 and disc_t<t2:
+            tess_cover = True
 
     today = dt.today()
     
@@ -206,6 +206,7 @@ def lc(ra, dec, out_fig, atlas_data_file):
     plt.tight_layout()
 
     fig.savefig(out_fig)
+    return tess_cover
     
 def atlas2yse(name, ra, dec, atlas_data_file):
     t = ascii.read(atlas_data_file)
@@ -238,35 +239,43 @@ def main(argv):
     dec = float(argv[1])
     date = argv[3]
     name = argv[2]
+    disc_t = 0.
+
     
     home_dir = lc_cfg['home_dir']+name+'/'
-    Save_space(home_dir)
+
 
     out_fig = home_dir + name + date + '_lc.'+lc_cfg['img_suffix'] 
     atlas_data_file = home_dir+name+date+'_atlas.csv'
 
 #    print([ra, dec, '3', name + date+'_texas'])
-    if os.path.exists(home_dir+name+'_texas.txt'):
-        galcan = ascii.read(home_dir+name+'_texas.txt')
-    else:
-        try:
-            galcan = texas.main([argv[0], argv[1], '3', home_dir + name + '_texas'])
-            ascii.write(galcan, home_dir+name+'_texas.txt', overwrite=True)  
-        except:
-            print('unable to access PanSTARRS')
+#    if os.path.exists(home_dir+name+'_texas.txt'):
+#        galcan = ascii.read(home_dir+name+'_texas.txt')
+#    else:
+#        try:
+#            galcan = texas.main([argv[0], argv[1], '3', home_dir + name + '_texas'])
+#            ascii.write(galcan, home_dir+name+'_texas.txt', overwrite=True)  
+#        except:
+#            print('unable to access PanSTARRS')
         
     ra = float(ra)
-    dec = float(dec)
-    lc(ra, dec, out_fig, atlas_data_file)
+    dec = float(dec)  
+#    tess_cover = False  
+    if len(argv)>4: 
+        disc_t = argv[4]
+    else:
+        disc_t = Time.now().mjd
+  #  if not os.path.exists(out_fig):
+    tess_cover = lc(ra, dec, out_fig, atlas_data_file, disc_t)
     atlas2yse(name, ra, dec, atlas_data_file)
 
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:
 #            f.write("%s\n" % item)
-    if len(galcan)>0:
-        return galcan[0]['z'], galcan[0]['source']
-    else:
-        return None, None
+ #   if len(galcan)>0:
+#        return tess_cover
+ #   else:
+    return tess_cover
  
 
 if __name__ == "__main__":

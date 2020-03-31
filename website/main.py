@@ -6,10 +6,13 @@ import datetime
 import weblesniff
 import sys
 import gspread
+from astropy.time import Time
 from astropy.table import Table, Column
 from oauth2client.service_account import ServiceAccountCredentials
 from numpy import dtype
-from config import web_cfg
+from config import web_cfg, lc_cfg
+import request, re
+import candidate_generator
 
 
 def sheet2aptable():
@@ -51,17 +54,20 @@ if __name__ == "__main__":
     k = 1
     for ta in cans:
         try:
+            disc_date = Time(ta["Disc date"], format = 'iso', scale = 'utc')
             print('start on '+ta['Name'] + ', '+str(k)+'/'+str(l))
-            k = k+1
-            z, source = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date])
+            k+=1
+            ta['TESS_coverage'] = lc_ex.main([str(ta['RA']), str(ta['Dec']), ta['Name'], date, disc_date.mjd])
+            hosts = ascii.read(lc_cfg['home_dir']+name+'/'+ name + '_texas.txt')
+            z = hosts['z'][0]
+            source = hosts['source'][0]
             if z!= None and z!='null' and ta['Redshift'] =='None':
                 ta['Redshift'] = str(z)
                 ta['z_source'] = source
-               
         except:
             continue
     
-
+#    print(cans)
     cans.sort(['Redshift','Type'])
     ascii.write(cans, 'candidates_sort.csv',names=cans.colnames, overwrite=True)
 
