@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import time
 import pygsheets
-from astripy.io import ascii
+from astropy.io import ascii
 from astropy.time import Time 
 import warnings
 from config import lc_cfg
@@ -158,7 +158,12 @@ def YSE_list():
 	
 	return df
 
-
+def delete_rows(sheet, dlist):
+	dlist.sort()
+	for i in range(len(dlist)):
+		row = dlist[i]+2-i
+		sheet.delete_row(row)
+		
 def Update_sheet():
 	"""
 	Updates the sheet.
@@ -173,12 +178,24 @@ def Update_sheet():
 	web = pd.DataFrame(st_cont, columns=headers)
 	df = YSE_list()
 #	print(web.keys())
+	to_delete = []
+	for i in range(len(web)):
+		texas_file = lc_cfg['home_dir']+web['Name'][i]+'/'+web['Name'][i]+'_texas'
+		if not os.path.exists(texas_file+'.txt'):
+			print('start TEXAS on '+web['Name'][i])
+			if not texas.main([web['RA'][i], web['Dec'][i], '3', texas_file]):
+				to_delete.append(i)
+
+	delete_rows(sheet, to_delete)
+
 	for i in range(len(df['Name'])):
 		name = df['Name'][i]
 		row = [df[col][i] for col in df.columns]
 		home_dir = lc_cfg['home_dir']+name+'/'
 		Save_space(home_dir)
-		if os.path.exist(home_dir+name+'_texas.txt'):
+		
+		texas_exist = False
+		if os.path.exists(home_dir+name+'_texas.txt'):
 			host_exist = True
 		else:
 			print('start TEXAS on '+name)
