@@ -6,6 +6,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import time
 import pygsheets
+from astripy.io import ascii
 from astropy.time import Time 
 import warnings
 from config import lc_cfg
@@ -177,12 +178,16 @@ def Update_sheet():
 		row = [df[col][i] for col in df.columns]
 		home_dir = lc_cfg['home_dir']+name+'/'
 		Save_space(home_dir)
+		if os.path.exist(home_dir+name+'_texas.txt'):
+			host_exist = True
+		else:
+			print('start TEXAS on '+name)
+			host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
+			
 		if (web['Name'] == name).any():
 			ind = int(np.where(web['Name'] == name)[0][0])+2
-		else:
+		elif host_exist:
 			try:
-				print('start TEXAS on '+name)
-				host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
 				while host_exist:
 					try:
 						sheet.insert_row(row, 2)
