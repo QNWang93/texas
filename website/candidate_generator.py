@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 
 def Save_space(Save):
     """
-    Creates a pathm if it doesn't already exist.
+    Creates a path if it doesn't already exist.
     """
     try:
         if not os.path.exists(Save):
@@ -180,10 +180,9 @@ def Update_sheet():
 #	print(web.keys())
 	to_delete = []
 	for i in range(len(web)):
+		Save_space(lc_cfg['home_dir']+web['Name'][i]+'/')
 		texas_file = lc_cfg['home_dir']+web['Name'][i]+'/'+web['Name'][i]+'_texas'
 		if not os.path.exists(texas_file+'.txt'):
-			home_dir = lc_cfg['home_dir']+web['Name'][i]+'/'
-			Save_space(home_dir)
 			print('start TEXAS on '+web['Name'][i])
 			if not texas.main([web['RA'][i], web['Dec'][i], '3', texas_file]):
 				to_delete.append(i)

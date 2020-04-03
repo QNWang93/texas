@@ -340,7 +340,7 @@ class weblesniffclass:
         webpage = webpageclass()
         webpage.loaddefaultpage(self.imagelist_htmltemplate)
 
-        webpage.substituteplaceholder('PLACEHOLDER_TITLE_PLACEHOLDER', os.path.basename(self.webdir))
+        webpage.substituteplaceholder('PLACEHOLDER_TITLE_PLACEHOLDER', os.path.basename('Candidates'))
         ggl_link = 'https://docs.google.com/spreadsheets/d/1x6DS_CmJWfhnbpwEn25DAgH194bzM7GtHkxrBhD05B4/edit?usp=sharing'
         webpage.substituteplaceholder('PLACEHOLDER_GOOGLESHEET_PLACEHOLDER', addlink2string('List',ggl_link))
         webpage.substituteplaceholder('PLACEHOLDER_BACKTOMAINLINK_PLACEHOLDER', addlink2string('BACK','..'))
@@ -349,7 +349,7 @@ class weblesniffclass:
         field = os.path.basename(self.webdir)
         imcounter = 0
 
-        img_dir = os.getcwd()+'/plots/'
+        img_dir = './plots/'
         header = web_cfg['header']
         infotable.startrow()
         for h in header:
@@ -388,7 +388,7 @@ class weblesniffclass:
                 s = addtag2string(s,tag)
                 infotable.addcol(s)  
                 
-                texas_info_file = img_dir + target +'/'+img[0][0:-4] + '.txt'
+                texas_info_file = './web/plots/' + target +'/'+img[0][0:-4] + '.txt'
 
                 try:
                     texas_info_table = ascii.read(texas_info_file)
@@ -409,7 +409,7 @@ class weblesniffclass:
         webpage.substituteplaceholder('PLACEHOLDER_LASTUPDATE_PLACEHOLDER', '%s' % time.asctime())
        
         print('### Saving ',self.webfilename)
-        webpage.savepage('./%s/%s' % ('pages',self.webfilename))
+        webpage.savepage('./web/candidates.html') #webpage.savepage('./%s/%s' % ('web',self.webfilename))
 
         del webpage
 

@@ -11,7 +11,7 @@ from astropy.table import Table, Column
 from oauth2client.service_account import ServiceAccountCredentials
 from numpy import dtype
 from config import web_cfg, lc_cfg
-import request, re
+#import request, re
 import candidate_generator
 
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     cans.sort(['Redshift','Type'])
     ascii.write(cans, 'candidates_sort.csv',names=cans.colnames, overwrite=True)
 
-    weblesniff.main(['./', date, 'imagelist_template.html', web_cfg['img_suffix'], cans])
+    weblesniff.main(['./web', 'candidates', 'imagelist_template.html', web_cfg['img_suffix'], cans])
 
     
     
