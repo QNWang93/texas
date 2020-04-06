@@ -182,9 +182,12 @@ def lc(ra, dec, out_fig, atlas_data_file, disc_t):
     tess_cover = False
     
     for [t1, t2] in tess_ob:
-        x= np.arange(t1-2400000, t2-2400000, 0.1)
-        ax1.fill_between(x, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
-        ax2.fill_between(x, 0, 10000, facecolor='grey', alpha=0.5, label = 'TESS')
+        x1= np.arange(t1-2400000, (t1+t2)/2-2400000-1., 0.1)
+        x2= np.arange((t1+t2)/2-2400000+1, t2-2400000, 0.1)
+        ax1.fill_between(x1, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
+        ax1.fill_between(x2, 10, 22, facecolor='grey', alpha=0.5)
+        ax2.fill_between(x1, 0, 10000, facecolor='grey', alpha=0.5, label = 'TESS')
+        ax2.fill_between(x2, 0, 10000, facecolor='grey', alpha=0.5)
         if disc_t>t1 and disc_t<t2:
             tess_cover = True
 

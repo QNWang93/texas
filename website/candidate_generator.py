@@ -76,7 +76,7 @@ def Check_gal_lat(Table):
 def Check_extinction(Table):
 	ind = []
 	for i in range(len(Table)):
-		if Table['mw_ebv'][i] <= 0.2:
+		if Table['mw_ebv'][i] <= 0.3:
 			ind += [i]
 	return ind
 
@@ -177,6 +177,7 @@ def Update_sheet():
 	headers = st_cont.pop(0)
 	web = pd.DataFrame(st_cont, columns=headers)
 	df = YSE_list()
+
 #	print(web.keys())
 	to_delete = []
 	for i in range(len(web)):
@@ -189,7 +190,7 @@ def Update_sheet():
 				to_delete.append(i)
 
 	delete_rows(sheet, to_delete)
-
+	print(df['Name'])
 	for i in range(len(df['Name'])):
 		name = df['Name'][i]
 		row = [df[col][i] for col in df.columns]
@@ -201,6 +202,7 @@ def Update_sheet():
 			host_exist = True
 		else:
 			print('start TEXAS on '+name)
+                        
 			host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
 			
 		if (web['Name'] == name).any():

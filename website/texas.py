@@ -596,9 +596,11 @@ def main(argv):
         gal_list = rearrange(gal_list, 'd')
         gal_list = rearrange(gal_list, 'norm_d')
         if do_im:
-            plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
-
-        plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
+            try:
+                plot(ra, dec, gal_list, s_list, ser_list, catalogue, search_size, filename)
+            except:
+                pass
+            plt.tight_layout(pad=1.0, w_pad=1.0, h_pad=1.0)
 
         ascii.write(gal_list, argv[3]+'.txt', overwrite=True)
         return True
