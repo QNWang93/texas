@@ -23,7 +23,7 @@ lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,245846
         'xlim': [-20, 5],
         'atlas_info': [{'address':'10.162.61.62', 'username':'minix', 'password':'123456'},
             {'address':'atlas-base-adm01.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'},
-            {'address':'atlas-base-db07.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'}],
+            {'address':'@atlas-base-sc01.ifa.hawaii.edu', 'username':'rridden', 'password':''}],
         'lookback_days':30,
         'color' : {'o':'orange', 'c': 'cyan', 'g':'blue', 'r': 'green', 'i':'red'},
         'atlat_sig_limit':3,
