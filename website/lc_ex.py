@@ -50,16 +50,19 @@ def to_array(somelist, column, start = 1):
     array = [float(i) for i in array_raw]
     return array
 
-def search_atlas(ra, dec):
+def search_atlas(ra, dec, Ryan = True):
     atlas_info = lc_cfg['atlas_info']
-    gateway_session1 = SSHSession(atlas_info[0]['address'],atlas_info[0]['username'], password=atlas_info[0]['password']).open()
-    if len(atlas_info)==3:
-        gateway_session2 = gateway_session1.get_remote_session(atlas_info[1]['address'],atlas_info[1]['username'], password=atlas_info[2]['password'])
-        remote_session = gateway_session2.get_remote_session(atlas_info[2]['address'], password=atlas_info[2]['password'])
-    elif len(atlas_info)==2:
-        remote_session = gateway_session1.get_remote_session(atlas_info[1]['address'], password=atlas_info[1]['password'])
-    else: 
-        print('wrong format for atlas_params: too many jump connection')
+    if Ryan:
+        remote_session = SSHSession(atlas_info[3]['address'],atlas_info[3]['username']).open()
+    else:
+        gateway_session1 = SSHSession(atlas_info[2]['address'],atlas_info[2]['username'], password=atlas_info[2]['password']).open()
+        if len(atlas_info)==3:
+            gateway_session2 = gateway_session1.get_remote_session(atlas_info[1]['address'],atlas_info[1]['username'], password=atlas_info[2]['password'])
+            remote_session = gateway_session2.get_remote_session(atlas_info[2]['address'], password=atlas_info[2]['password'])
+        elif len(atlas_info)==2:
+            remote_session = gateway_session1.get_remote_session(atlas_info[1]['address'], password=atlas_info[1]['password'])
+        else: 
+            print('wrong format for atlas_params: too many jump connection')
 
     today = dt.today()
     con = sqlite3.connect(":memory:")
