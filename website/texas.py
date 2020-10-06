@@ -518,19 +518,19 @@ def main(argv):
 	 
     #downloading image part
 
-
     if catalogue == 'glade':
         gal_list=sourcesearch_glade(ra,dec, size/240)#search in radius of cutout size 
         ned_list = sourcesearch_ned(ra,dec, size/240)
     elif catalogue == 'texas':
         gal_list=sourcesearch_texas(ra,dec, size/240)
+
     else:
         print('no this catalogue')
 
 
-
     ser_list = search_ser(ra, dec, search_size)
     i=0
+
     if len(ser_list)>0:
         ser_list = ser_rearrange(ser_list, ra, dec)#reorder by norm_d and remove far away ones
     if len(ser_list)>0:

@@ -21,12 +21,12 @@ lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,245846
         2459332.5,2459360.5,2459389.5],
         'home_dir': './plots/',
         'xlim': [-20, 5],
-        'atlas_info': [{'address':'10.162.61.62', 'username':'minix', 'password':'123456'},
-            {'address':'atlas-base-adm01.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'},
+        'atlas_info': [#{'address':'10.162.61.62', 'username':'minix', 'password':'123456'},
+            {'address':'atlas-base-sc01.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'},
             {'address':'atlas-base-db07.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'}],
         'lookback_days':30,
         'color' : {'o':'orange', 'c': 'cyan', 'g':'blue', 'r': 'green', 'i':'red'},
-        'atlat_sig_limit':3,
+        'atlas_sig_limit':3,
         'img_suffix':texas_cfg['img_suffix']
         }
 web_cfg = {'header': ['Name','RA','Dec','Disc date','Type','PS prob','Redshift', 'MW E(B-V)', 'TESS_coverage', 'lc','texas img','texas_table'],

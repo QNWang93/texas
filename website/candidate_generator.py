@@ -179,17 +179,17 @@ def Update_sheet():
 	df = YSE_list()
 
 #	print(web.keys())
-	to_delete = []
-	for i in range(len(web)):
-		texas_file = lc_cfg['home_dir']+web['Name'][i]+'/'+web['Name'][i]+'_texas'
-		if not os.path.exists(texas_file+'.txt'):
-			home_dir = lc_cfg['home_dir']+web['Name'][i]+'/'
-			Save_space(home_dir)
-			print('start TEXAS on '+web['Name'][i])
-			if not texas.main([web['RA'][i], web['Dec'][i], '3', texas_file]):
-				to_delete.append(i)
+#	to_delete = []
+#	for i in range(len(web)):
+#		texas_file = lc_cfg['home_dir']+web['Name'][i]+'/'+web['Name'][i]+'_texas'
+#		if not os.path.exists(texas_file+'.txt'):
+#			home_dir = lc_cfg['home_dir']+web['Name'][i]+'/'
+#			Save_space(home_dir)
+#			print('start TEXAS on '+web['Name'][i])
+#			if not texas.main([web['RA'][i], web['Dec'][i], '3', texas_file]):
+#				to_delete.append(i)
 
-	delete_rows(sheet, to_delete)
+#	delete_rows(sheet, to_delete)
 	print(df['Name'])
 	for i in range(len(df['Name'])):
 		name = df['Name'][i]
@@ -202,19 +202,27 @@ def Update_sheet():
 			host_exist = True
 		else:
 			print('start TEXAS on '+name)
-                        
-			host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
+			while True:
+				try:
+					host_exist = texas.main([df['RA'][i], df['Dec'][i], '3', home_dir + name + '_texas'])
+					print(host_exist)
+				except:
+					time.sleep(60)					
+					print('next round texas')
+					continue
+				break
+
 			
 		if (web['Name'] == name).any():
 			ind = int(np.where(web['Name'] == name)[0][0])+2
-		elif host_exist:
+		elif True:#host_exist:
 			try:
-				while host_exist:
+				while True:#host_exist:
 					try:
 						sheet.insert_row(row, 2)
 					except:
 						time.sleep(100)
-						print('next round')
+						print('next round insert sheet')
 						continue
 					print('Added ', name)
 					break

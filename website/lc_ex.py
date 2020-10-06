@@ -17,6 +17,7 @@ import texas
 from astropy.io import ascii
 from config import lc_cfg
 from astropy.time import Time
+from candidate_generator import Save_space
 
 def tess_obs(ra, dec):
 
@@ -63,7 +64,7 @@ def search_atlas(ra, dec):
 
     today = dt.today()
     con = sqlite3.connect(":memory:")
-    tdate = ' '+str(list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-lc_cfg['lookback_days']-2400000)
+    tdate = '  '+str(list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-lc_cfg['lookback_days']-2400000)
 
     result=remote_session.get_cmd_output('./mod_force.sh '+str(ra)+' '+ str(dec)+tdate)
 
@@ -93,7 +94,6 @@ def ztf2lc(ztf_obj):
         if phot['isdiffpos'] == 'f':
             continue
         lc.add_row([phot['jd'], phot['magap'], phot['sigmagap'], phot['filter']])
-    
     return lc
     
 def plot(ax,lc, survey):
@@ -101,7 +101,6 @@ def plot(ax,lc, survey):
         limit =lc['flux']<lc['fluxerr']
     else:
         limit = lc['mag']>0
-    
     for i in set(lc['filter']):
         index = lc['filter']==i
         jd = lc['jd'][index]
@@ -109,15 +108,13 @@ def plot(ax,lc, survey):
             jd = jd -2400000
         mag = abs(lc['mag'][index])
         err = lc['mag_err'][index]
-        
         if survey =='atlas':
             flux = lc['flux'][index]
             fluxerr = lc['fluxerr'][index]
-
-            limit =flux<lc_cfg['atlat_sig_limit']*fluxerr
+            limit =flux<lc_cfg['atlas_sig_limit']*fluxerr
+             
         else:
             limit = mag<0
-
         real = [not i for i in limit]
 
         ax.errorbar(jd[real], mag[real], err[real], label = survey +' ' + i, fmt='o', color = lc_cfg['color'][i])
@@ -155,14 +152,16 @@ def lc(ra, dec, out_fig, atlas_data_file, disc_t):
 
     try:
         atlas_lc = search_atlas(ra, dec)
+        print('got lc')
         mask = (abs(atlas_lc['mag'])>10)
         atlas_lc = atlas_lc[mask]
+#        print(atlas_lc)
         if len(atlas_lc)>0:
+            print(atlas_data_file)
             ascii.write(atlas_lc, atlas_data_file, overwrite=True)
+#            print(3)
             ax1 = plot(ax1,atlas_lc, 'atlas')
-
             ax2 = plot_atflux(ax2, atlas_lc, 'atlas')
-
             ax2.set_ylim(-0.1*max(atlas_lc['flux']), 1.2*max(atlas_lc['flux']))
             if len(lc)>0: 
                 ax1 = plot(ax1,lc, 'ztf')
@@ -179,22 +178,25 @@ def lc(ra, dec, out_fig, atlas_data_file, disc_t):
             ax1.set_ylim(min(max(abs(lc['mag']))+0.5, 21), min(abs(lc['mag']))-0.5)
     
     tess_ob = tess_obs(ra, dec)
+#    print(tess_ob)
     tess_cover = False
+    
+    today = dt.today()
+    con = sqlite3.connect(":memory:")
+    tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
     
     for [t1, t2] in tess_ob:
         x1= np.arange(t1-2400000, (t1+t2)/2-2400000-1., 0.1)
         x2= np.arange((t1+t2)/2-2400000+1, t2-2400000, 0.1)
-        ax1.fill_between(x1, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
-        ax1.fill_between(x2, 10, 22, facecolor='grey', alpha=0.5)
-        ax2.fill_between(x1, 0, 10000, facecolor='grey', alpha=0.5, label = 'TESS')
-        ax2.fill_between(x2, 0, 10000, facecolor='grey', alpha=0.5)
+#        print(t2,tdate + lc_cfg['xlim'][0] , t1,tdate+lc_cfg['xlim'][1])
+        if x2[-1]> tdate + lc_cfg['xlim'][0] and x1[0]< tdate+lc_cfg['xlim'][1]:
+            ax1.fill_between(x1, 10, 22, facecolor='grey', alpha=0.5, label = 'TESS')
+            ax1.fill_between(x2, 10, 22, facecolor='grey', alpha=0.5)
+            ax2.fill_between(x1, 0, 10000, facecolor='grey', alpha=0.5, label = 'TESS')
+            ax2.fill_between(x2, 0, 10000, facecolor='grey', alpha=0.5)
         if disc_t>t1 and disc_t<t2:
             tess_cover = True
 
-    today = dt.today()
-    
-    con = sqlite3.connect(":memory:")
-    tdate = list(con.execute("select julianday('"+today.strftime("%Y-%m-%d")+"')"))[0][0]-2400000
     ax1.axvline(x=tdate, color = 'k', label = today.strftime("%m/%d/%Y, %H:%M"))
     ax1.set_ylabel('Mag')
     ax1.axhline(y = 18, color = 'grey', linestyle = ':')
@@ -209,6 +211,7 @@ def lc(ra, dec, out_fig, atlas_data_file, disc_t):
     plt.tight_layout()
 
     fig.savefig(out_fig)
+    print('finish lc plotting')
     return tess_cover
     
 def atlas2yse(name, ra, dec, atlas_data_file):
@@ -246,7 +249,7 @@ def main(argv):
 
     
     home_dir = lc_cfg['home_dir']+name+'/'
-
+    Save_space(home_dir)
 
     out_fig = home_dir + name + date + '_lc.'+lc_cfg['img_suffix'] 
     atlas_data_file = home_dir+name+date+'_atlas.csv'
@@ -269,16 +272,17 @@ def main(argv):
     else:
         disc_t = Time.now().jd
         
-    if not os.path.exists(out_fig):
+    if not os.path.exists(out_fig): # changed when server down.. will be back
         tess_cover = lc(ra, dec, out_fig, atlas_data_file, disc_t)
-        atlas2yse(name, ra, dec, atlas_data_file)
     else:    
         tess_ob = tess_obs(ra, dec)
         tess_cover = False
         for [t1, t2] in tess_ob:
             if disc_t>t1 and disc_t<t2:
                 tess_cover = True
-
+                
+    if os.path.exists(atlas_data_file): # changed when server down.. will be back
+        atlas2yse(name, ra, dec, atlas_data_file)
 #    with open(home_dir+name+date+'_texas.txt', 'w+') as f:
 #        for item in galcan:
 #            f.write("%s\n" % item)
