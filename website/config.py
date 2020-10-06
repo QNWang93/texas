@@ -2,8 +2,8 @@
 #import preprocessing
 from numpy import dtype
 texas_cfg = {'n_radius': 2,
-         'casjob_id': '1827319063',
-         'casjob_pw': '123456789',
+         'casjob_id': '',
+         'casjob_pw': '',
          'catalogue': 'glade',
          'do_im': True,
          'point_search_rad' : 1,
@@ -22,8 +22,8 @@ lc_cfg = {'tess_date': [2458324.5,2458352.5,2458381.5,2458409.5,2458437.5,245846
         'home_dir': './plots/',
         'xlim': [-20, 5],
         'atlas_info': [#{'address':'10.162.61.62', 'username':'minix', 'password':'123456'},
-            {'address':'atlas-base-sc01.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'},
-            {'address':'atlas-base-db07.ifa.hawaii.edu', 'username':'qinan', 'password':'PRBNAhK93bMc88Qn'}],
+            {'address':'', 'username':'', 'password':''},
+            {'address':'', 'username':'', 'password':''}],
         'lookback_days':30,
         'color' : {'o':'orange', 'c': 'cyan', 'g':'blue', 'r': 'green', 'i':'red'},
         'atlas_sig_limit':3,
